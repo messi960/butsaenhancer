@@ -58,8 +58,84 @@ if(typeof GM_log === "undefined") {
   }
 }
 
+if (typeof(this['uneval']) !== 'function') {
+    var hasOwnProperty = Object.prototype.hasOwnProperty;
+    var protos = [];
+    var char2esc = {
+        '\t': 't',
+        '\n': 'n',
+        '\v': 'v',
+        '\f': 'f',
+        '\r': '\r',
+        '\'': '\'',
+        '\"': '\"',
+        '\\': '\\'
+    };
+    var escapeChar = function(c){
+        if (c in char2esc) return '\\' + char2esc[c];
+        var ord = c.charCodeAt(0);
+        return ord < 0x20 ? '\\x0' + ord.toString(16) : ord < 0x7F ? '\\' + c : ord < 0x100 ? '\\x' + ord.toString(16) : ord < 0x1000 ? '\\u0' + ord.toString(16) : '\\u' + ord.toString(16);
+    };
+    var uneval_asis = function(o){
+        return o.toString();
+    };
+    /* predefine objects where typeof(o) != 'object' */
+    var name2uneval = {
+        'boolean': uneval_asis,
+        'number': uneval_asis,
+        'string': function(o){
+            return '\'' +
+            o.toString().replace(/[\x00-\x1F\'\"\\\u007F-\uFFFF]/g, escapeChar) +
+            '\'';
+        },
+        'undefined': function(o){
+            return 'undefined';
+        },
+        'function': uneval_asis
+    };
+    var uneval_default = function(o, np){
+        var src = []; // a-ha!
+        for (var p in o) {
+            if (!hasOwnProperty.call(o, p)) continue;
+            src[src.length] = uneval(p) + ':' + uneval(o[p], 1);
+        }
+        // parens needed to make eval() happy
+        return np ? '{' + src.toString() + '}' : '({' + src.toString() + '})';
+    };
+    uneval_set = function(proto, name, func){
+        protos[protos.length] = [proto, name];
+        name2uneval[name] = func || uneval_default;
+    };
+    uneval_set(Array, 'array', function(o){
+        var src = [];
+        for (var i = 0, l = o.length; i < l; i++) 
+            src[i] = uneval(o[i]);
+        return '[' + src.toString() + ']';
+    });
+    uneval_set(RegExp, 'regexp', uneval_asis);
+    uneval_set(Date, 'date', function(o){
+        return '(new Date(' + o.valueOf() + '))';
+    });
+    var typeName = function(o){
+        // if (o === null) return 'null';
+        var t = typeof o;
+        if (t != 'object') return t;
+        // we have to lenear-search. sigh.
+        for (var i = 0, l = protos.length; i < l; i++) {
+            if (o instanceof protos[i][0]) return protos[i][1];
+        }
+        return 'object';
+    };
+    uneval = function(o, np){
+        // if (o.toSource) return o.toSource();
+        if (o === null) return 'null';
+        var func = name2uneval[typeName(o)] || uneval_default;
+        return func(o, np);
+    };
+}
+
 var beScript = {
-	VERSION : "0.0.3",
+	VERSION : "0.0.4",
     NAMESPACE : "butsa_enhancer",
     UPDATES_CHECK_FREQ : 15, //minutes
     S_ID : 101727,
@@ -171,12 +247,12 @@ beScript.Util = {
         if ( typeof uneval != 'undefined' ) {
             GM_setValue(str, uneval(source));
         } else {
-            GM_setValue(str, source);
+            GM_setValue(str, $.serialize(source));
         }
 	},
 	deserialize : function(container, defaultValue) {
 		var value = GM_getValue(beScript.NAMESPACE + "_" + container, defaultValue);
-//        beScript.log(container + " value is " + value);
+        beScript.log(container + " value is " + value);
         
 		if (defaultValue != null) {
 			if (value == "" || value == null || value == "null") {
@@ -200,7 +276,17 @@ beScript.Util = {
         
         return false;
 	},
-    makeTableSortable : function( table, sorters, defaultSort, hasBottomRow ) {
+    makeTableSortable : function( settingName, table, sorters, defaultSort, hasBottomRow, tableIndexOnAPage ) {
+        var autoName = beScript.Util.checkByRegExp(window.location.href, /act=(\w+)/);
+        
+        if ( autoName ) {
+            settingName += autoName[1];
+        }
+        
+        if ( tableIndexOnAPage ) {
+            settingName += "_" + tableIndexOnAPage;
+        }
+        
         var playersTableBody = $(table.children()[0]);
         var headerRow = $(playersTableBody.children()[0]);
         
@@ -232,9 +318,12 @@ beScript.Util = {
         
         headerRow.wrap( "<thead style='font-size: 10px;'/>" )
 
+        //var sortSettings = [defaultSort];
+        var sortSettings = beScript.Util.deserialize( settingName, [defaultSort] );
+        
         table.tablesorter({
             widgets: ['beScript.zebra'],
-            sortList: [defaultSort],
+            sortList: sortSettings,
             headers: sorters,
             textExtraction : function(node) {
                 if ( $("select", $(node)).length > 0 ) {
@@ -265,6 +354,42 @@ beScript.Util = {
                 
                 return "";
             }
+        });
+        
+        table.bind("sortEnd", function() { 
+            var sortedColumns = $(".headerSortDown,.headerSortUp", table);
+            var prnt = $("th", $(sortedColumns[0]).parent());
+            if ( sortedColumns.length == 1 ) {
+                sortSettings = [];
+            }
+            for (var i = 0; i < sortedColumns.length; i++ ) {
+                var sortedClass = $(sortedColumns[i]).attr( "class" );
+                var index = prnt.index( sortedColumns[i] );
+
+                if ( index < 0 ) {
+                    continue;
+                }
+                
+                var sortDirection = 1;
+                
+                if ( beScript.Util.checkByRegExp( sortedClass, "Down" ) ) {
+                    sortDirection = 0;
+                }
+                var found = false;
+                for ( var k = 0; k < sortSettings.length; k++ ) {
+                    if ( sortSettings[k][0] == index ) {
+                        found = true;
+                        sortSettings[k][1] = sortDirection;
+                        
+                        break;
+                    }
+                }
+                
+                if ( !found ) {
+                    sortSettings.push( [index, sortDirection] );
+                }
+            }
+            beScript.Util.serialize( settingName, sortSettings );
         });
     },
 };
@@ -433,11 +558,13 @@ beScript.organizer = {
 beScript.roster = {
     makeC11Links : function() {
         var division = $("input[name='Division']").attr( "value" );
-        var divisionId = beScript.Util.checkByRegExp(division, /division=(\d+)/)[1];
-        var powerSpan = $("input[name='Power']").next();
-        powerSpan.wrap( "<a href='http://www.butsa.ru/xml/ratings/ratings.php?class=1&id=1&Division=" + divisionId + "' />" );
-        var power11Span = $("input[name='Power11']").next();
-        power11Span.wrap( "<a href='http://www.butsa.ru/xml/ratings/ratings.php?class=1&id=28&Division=" + divisionId + "' />" );
+        if ( division ) {
+            var divisionId = beScript.Util.checkByRegExp(division, /division=(\d+)/)[1];
+            var powerSpan = $("input[name='Power']").next();
+            powerSpan.wrap( "<a href='http://www.butsa.ru/xml/ratings/ratings.php?class=1&id=1&Division=" + divisionId + "' />" );
+            var power11Span = $("input[name='Power11']").next();
+            power11Span.wrap( "<a href='http://www.butsa.ru/xml/ratings/ratings.php?class=1&id=28&Division=" + divisionId + "' />" );
+        }
     },
     process : function() {
         var playersTable = $($(".maintable")[2]);
@@ -461,7 +588,7 @@ beScript.roster = {
             });
         }
 
-        beScript.Util.makeTableSortable( playersTable, _headers, [3, 0] );
+        beScript.Util.makeTableSortable( "roster", playersTable, _headers, [3, 0] );
         beScript.roster.makeC11Links();
     }
 };
@@ -501,7 +628,7 @@ beScript.school = {
                 });
             }
             
-            beScript.Util.makeTableSortable( playersTable, _headers, [3, 0] );
+            beScript.Util.makeTableSortable( "school", playersTable, _headers, [3, 0] );
         }
     }
 };
@@ -530,7 +657,7 @@ beScript.train = {
             }
 
             trainTable.each( function(i) {
-                beScript.Util.makeTableSortable( $(this), _headers, sort, hasBottomRow );
+                beScript.Util.makeTableSortable( "train", $(this), _headers, sort, hasBottomRow, i );
             });
 //        }
     }
@@ -569,7 +696,6 @@ beScript.Update = {
 		};
 
 		this.update = function(checkver) {
-                beScript.log(checkver);
                 vnum = checkver;
                 checkver = checkver.split('.');
 
