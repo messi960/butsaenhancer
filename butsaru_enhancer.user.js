@@ -61,7 +61,9 @@ if(typeof GM_log === "undefined") {
 var beScript = {
 	VERSION : "0.0.2",
     NAMESPACE : "butsa_enhancer",
-    UPDATES_CHECK_FREQ : 1, // hours
+    UPDATES_CHECK_FREQ : 15, //minutes
+    S_ID : 101727,
+    manu : null,
 	log : function(msg) {
         GM_log( msg )
 	},
@@ -85,6 +87,8 @@ var beScript = {
         "Rf" : 17
     },
     init : function() {
+        beScript.addBeScriptHeader();
+        beScript.Update.init();
         beScript.Util.init();
         if (beScript.Util.checkLocation( "kp.php" )) {
             beScript.forecasts.process();
@@ -95,7 +99,16 @@ var beScript = {
         if (beScript.Util.checkLocation( "organizer" )) {
             beScript.organizer.process();
         }
-	}
+	},
+    addBeScriptHeader : function() {
+        var greetingTd = $(".autoten");
+        greetingTd.attr( "width", "800" );
+        greetingTd.before( "<td width='160' id='beScript_td'/>" );
+        
+        var beScript_td = $( "#beScript_td" );
+        beScript_td.html( "<span id='beScript_menu' style='margin-left:20px;color:grey;'>beScript (" + beScript.VERSION + ")</span>" );
+        beScript.menu = $("#beScript_menu");
+    },
 };
 
 beScript.Util = {
@@ -143,6 +156,40 @@ beScript.Util = {
 		if (res) {
 			return res.toString();
 		}
+	},
+    serialize : function(container, source) {
+		var str = beScript.NAMESPACE + "_" + container;
+        if ( typeof uneval != 'undefined' ) {
+            GM_setValue(str, uneval(source));
+        } else {
+            GM_setValue(str, source);
+        }
+	},
+	deserialize : function(container, defaultValue) {
+		var value = GM_getValue(beScript.NAMESPACE + "_" + container, defaultValue);
+//        beScript.log(container + " value is " + value);
+        
+		if (defaultValue != null) {
+			if (value == "" || value == null || value == "null") {
+				value = defaultValue;
+//				beScript.log(container + " value set to default "
+//						+ defaultValue);
+			}
+		}
+        
+		return eval(value);
+	},
+    checkPeriod : function(timeSource, period) {
+		var lastupdate = beScript.Util.deserialize(timeSource, 0);
+		var now = new Date().getTime();
+		var dif = (now - lastupdate);
+        
+		if ((dif >= period) || (dif <= -period)) {
+			beScript.Util.serialize(timeSource, now);
+			return true;
+		}
+        
+        return false;
 	},
 };
 
@@ -304,6 +351,7 @@ beScript.organizer = {
         beScript.organizer.addLastMatchesResults();
     }
 };
+
 beScript.roster = {
     makeTableSortable : function() {
         var playersTable = $($(".maintable")[2]);
@@ -386,6 +434,79 @@ beScript.roster = {
         beScript.roster.makeTableSortable();
     }
 };
+
+beScript.Update = {
+	UpdaterClass : function(updTime) {
+		var _t = this;
+		var url = 'http://butsaenhancer.googlecode.com/svn/trunk/version.txt';
+		var randSeed = Math.floor(1 + (9999) * Math.random());
+
+		this.init = function() {
+			if (beScript.Util.checkPeriod("updTime", updTime)) {
+				beScript.log("update check");
+				this.check();
+			}
+		};
+
+		this.check = function() {
+			randSeed = Math.floor(1 + (9999) * Math.random());
+			beScript.log("update url: " + url + "?seed=" + randSeed);
+            
+            if(typeof GM_xmlhttpRequest != "undefined") {
+                GM_xmlhttpRequest({
+						method : "GET",
+						url : url + "?seed=" + randSeed,
+						onreadystatechange : function(o) {
+                            if (o.readyState == 4) {
+                                _t.update(o.responseText);
+                            }
+                        }
+					});
+            } else {
+                $.get(url + "?seed=" + randSeed, function(data) {_t.update($(data.responseText).text()); });
+            }
+		};
+
+		this.update = function(checkver) {
+                beScript.log(checkver);
+                vnum = checkver;
+                checkver = checkver.split('.');
+
+                var thisver = beScript.VERSION.split('.');
+                var flag = false;
+                checkver = parseInt(checkver[0] * 10000, 10)
+                        + parseInt(checkver[1] * 100, 10)
+                        + parseInt(checkver[2], 10);
+                thisver = parseInt(thisver[0] * 10000, 10)
+                        + parseInt(thisver[1] * 100, 10)
+                        + parseInt(thisver[2], 10);
+                beScript.log("update processed");
+                beScript.log("v:" + thisver + " u:" + checkver);
+
+                if (checkver - thisver > 0) {
+                    beScript.menu.css( {'color':'red','text-decoration':'underline'} );
+                    beScript.menu.attr( "title", "Кликните, чтобы поставить версию " + vnum );
+                    beScript.menu.attr( "onClick", "javascript:window.location='http://userscripts.org/scripts/source/101727.user.js'" );
+                }
+		};
+
+		this.install = function() {
+			window.location = 'http://userscripts.org/scripts/source/' + beScript.S_ID + '.user.js';
+
+		};
+
+		this.init();
+	},
+	updater : null,
+	init : function() {
+        beScript.Update.updater = new beScript.Update.UpdaterClass(beScript.UPDATES_CHECK_FREQ * 1000 * 60);
+		setTimeout(function() {
+					beScript.Update.updater.check();
+				}, beScript.UPDATES_CHECK_FREQ * 1000 * 60);
+	}
+};
+
+jQuery.ajax=(function(_ajax){var protocol=location.protocol,hostname=location.hostname,exRegex=RegExp(protocol+'//'+hostname),YQL='http'+(/^https/.test(protocol)?'s':'')+'://query.yahooapis.com/v1/public/yql?callback=?',query='select * from html where url="{URL}" and xpath="*"';function isExternal(url){return!exRegex.test(url)&&/:\/\//.test(url)}return function(o){var url=o.url;if(/get/i.test(o.type)&&!/json/i.test(o.dataType)&&isExternal(url)){o.url=YQL;o.dataType='json';o.data={q:query.replace('{URL}',url+(o.data?(/\?/.test(url)?'&':'?')+jQuery.param(o.data):'')),format:'xml'};if(!o.success&&o.complete){o.success=o.complete;delete o.complete}o.success=(function(_success){return function(data){if(_success){_success.call(this,{responseText:data.results[0].replace(/<script[^>]+?\/>|<script(.|\s)*?\/script>/gi,'')},'success')}}})(o.success)}return _ajax.apply(this,arguments)}})(jQuery.ajax);
 
 (function(){
     if (typeof jQuery.tablesorter == 'undefined') {
