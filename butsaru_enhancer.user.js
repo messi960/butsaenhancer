@@ -789,7 +789,7 @@ beScript.Update = {
                     beScript.menu.css( {'color':'red','text-decoration':'underline'} );
                     beScript.menu.attr( "title", "Кликните, чтобы поставить версию " + vnum );
                     if ( window.navigator.vendor.match(/Google/) ) {
-                        beScript.menu.attr( "onClick", "javascript:window.location='http://butsaenhancer.googlecode.com/svn/trunk/'" );
+                        beScript.menu.attr( "onClick", "javascript:window.location='http://butsaenhancer.googlecode.com/svn/trunk/Butsa%20Enhancer.crx'" );
                     } else {
                         beScript.menu.attr( "onClick", "javascript:window.location='http://userscripts.org/scripts/source/101727.user.js'" );
                     }
