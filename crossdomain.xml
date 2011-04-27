@@ -1,6 +1,0 @@
-<cross-domain-policy>
-<allow-access-from domain="*.butsa.ru" to-ports="80"/>
-<allow-access-from domain="butsa.ru" to-ports="80"/>
-<allow-access-from domain="*.champions.ru" to-ports="80"/>
-<allow-access-from domain="champions.ru" to-ports="80"/>
-</cross-domain-policy>

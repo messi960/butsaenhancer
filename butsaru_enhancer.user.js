@@ -135,7 +135,7 @@ if (typeof(this['uneval']) !== 'function') {
 }
 
 var beScript = {
-	VERSION : "0.0.4",
+	VERSION : "0.0.5",
     NAMESPACE : "butsa_enhancer",
     UPDATES_CHECK_FREQ : 15, //minutes
     S_ID : 101727,
@@ -581,6 +581,12 @@ beScript.roster = {
                 10: { sorter:'digit' },
                 11: { sorter:'digit' },
                 12: { sorter:'digit' },
+            });
+        } else if ( beScript.Util.checkLocation( "act=stats" ) ) {
+            $.extend( true, _headers, {
+                9: { sorter:'digit' },
+                10: { sorter:'digit' },
+                11: { sorter:'digit' },
             });
         } else {
             $.extend( true, _headers, {
