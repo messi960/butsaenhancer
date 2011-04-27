@@ -1,0 +1,15 @@
+{
+  // Required
+  "name": "beScript",
+  "version": "0.0.6",
+
+  // Recommended
+  "background_page": "background.html",
+  "description": "butsa.ru || champions.ru UI tweaks.",
+  "content_scripts": [ {
+    "matches": ["http://butsa.ru/*", "http://www.butsa.ru/*", "http://champions.ru/*", "http://www.champions.ru/*"], 
+    "js": ["butsaru_enhancer.user.js"],
+    "all_frames": true
+  }],
+  "permissions": ["http://butsaenhancer.googlecode.com/"]
+}
