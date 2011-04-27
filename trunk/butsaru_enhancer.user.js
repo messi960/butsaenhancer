@@ -8,7 +8,7 @@
 // ==/UserScript==
 
 var beScript = {
-	VERSION : "0.0.7",
+	VERSION : "0.0.8",
     NAMESPACE : "butsa_enhancer",
     UPDATES_CHECK_FREQ : 15, //minutes
     S_ID : 101727,
@@ -46,7 +46,7 @@ var beScript = {
             beScript.school.process();
         }
         if (beScript.Util.checkLocation( "train" )) {
-            beScript.train.process();
+//            beScript.train.process();
         }
         if (beScript.Util.checkLocation( "roster" ) && !beScript.Util.checkLocation( "school" )) {
             beScript.roster.process();
@@ -577,6 +577,7 @@ beScript.train = {
                 });
             } else {
                 sort = [3, 0];
+                beScript.log( "1" );
                 $.extend( true, _headers, { 
                     3: { sorter:'beScript.sorter.positions' },
                 });
