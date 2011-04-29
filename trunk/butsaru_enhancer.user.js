@@ -5,7 +5,6 @@
 // @include http://butsa.ru/*
 // @include http://*.champions.ru/*
 // @include http://champions.ru/*
-// @include http://kovpas.ru/*
 // ==/UserScript==
 
 Player = function() {
@@ -39,7 +38,7 @@ Player = function() {
 };
 
 var beScript = {
-	VERSION : "0.0.10",
+	VERSION : "0.0.11",
     NAMESPACE : "butsa_enhancer",
     UPDATES_CHECK_FREQ : 15, //minutes
     TEAM_UPDATES_CHECK_FREQ : 60 * 24, // minutes; recommended value is 60 * 24 = 1440 = 1 day.
@@ -147,8 +146,8 @@ var beScript = {
                         
                         player.talent = parseInt( $(fields[7]).text().trim() );
                         player.expLevel = parseInt( $(fields[8]).text().trim() );
-                        player.salary = parseInt($(fields[10]).text().trim().replace( /\./, "" ));
-                        player.cost = parseInt($(fields[12]).text().trim().replace( /\./, "" ));
+                        player.salary = parseInt($(fields[10]).text().trim().replace( /\./g, "" ));
+                        player.cost = parseInt($(fields[12]).text().trim().replace( /\./g, "" ));
                         
                         teamPlayers[player.id] = player;
                     });
