@@ -38,7 +38,7 @@ Player = function() {
 };
 
 var beScript = {
-	VERSION : "0.0.11",
+	VERSION : "0.0.12",
     NAMESPACE : "butsa_enhancer",
     UPDATES_CHECK_FREQ : 15, //minutes
     TEAM_UPDATES_CHECK_FREQ : 60 * 24, // minutes; recommended value is 60 * 24 = 1440 = 1 day.
@@ -71,7 +71,6 @@ var beScript = {
         "Rf" : 17
     },
     getPlayerById : function( team, id ) {
-        beScript.log( beScript.teams[team.id] );
         var players = beScript.teams[team.id].players;
         var player = null;
         
@@ -84,157 +83,197 @@ var beScript = {
         
         return player;
     },
-    loadTeamPlayers : function( team ) {
-        if ( !team.players || team.players.length == 0 
-            || beScript.Util.checkPeriod( "teamsUpdTime", beScript.TEAM_UPDATES_CHECK_FREQ * 1000 * 60 ) ) {
-            $.ajax({
-                url: "/roster/" + team.id,
-                success: function(data) {
-                    var playersTable = $($(".maintable", $(data))[2]);
-                    var playersRows = $( "tr[bgcolor='#ffffff'],tr[bgcolor='#EEF4FA']", playersTable );
-                    var teamPlayers = {};
-                    
-                    playersRows.each(function(i) {
-                        var fields = $( "td", $(this) );
-                        var id = parseInt(beScript.Util.checkByRegExp( $( "a", $(fields[1]) ).attr( "href" ), /(\d+)/ )[1]);
-                        var player = beScript.getPlayerById( team, id );
+    loadTeamPlayers : function( team, force) {
+        var playersLoaded = ($(team.players).length > 0);
+        var timeUpdaterFired = beScript.Util.checkPeriod( "teamsUpdTime", beScript.TEAM_UPDATES_CHECK_FREQ * 1000 * 60 );
+        var playersStatus = (playersLoaded && !timeUpdaterFired && !force)?team.players.status:0;
+
+        if ( !playersLoaded || timeUpdaterFired || playersStatus != 15 ) {
+            if ( (playersStatus & 1) == 0 ) {
+                $.ajax({
+                    url: "/roster/" + team.id,
+                    success: function(data) {
+                        var playersTable = $($(".maintable", $(data))[2]);
+                        var playersRows = $( "tr[bgcolor='#ffffff'],tr[bgcolor='#EEF4FA']", playersTable );
+                        var teamPlayers = {
+                            status : beScript.teams[team.id].players.status
+                        };
                         
-                        player.number = parseInt( $(fields[0]).text().trim() );
-                        player.name = $(fields[1]).text().trim();
-                        player.country = {};
-                        player.country.name = $( "img", $(fields[2]) ).attr( "title" ).trim();
-                        player.country.id = parseInt(beScript.Util.checkByRegExp( $( "img", $(fields[2]) ).attr( "src" ), /(\d+)\.gif/ )[1]);
-                        var pos = beScript.Util.checkByRegExp( $(fields[3]).text().trim(), /(\w+)\/?(\w+)?/ );
-                        player.primaryPosition = pos[1];
-                        player.secondaryPosition = pos[2];
-                        player.age = parseInt( $(fields[4]).text().trim() );
-                        player.morale = parseInt(beScript.Util.checkByRegExp($(fields[10]).attr("title"), /\d+/)[0]);
-                        player.bonuses = $(fields[11]).text().trim();
-                        var bonusPoints = beScript.Util.checkByRegExp( $(fields[12]).text().trim(), /(\d+)\((\d+)\)?/ );
-                        player.bonusPoints = parseInt(bonusPoints[1]);
-                        player.nextBonusPoints = parseInt(bonusPoints[2]);
+                        if ( beScript.teams[team.id].players ) {
+                            teamPlayers.status = beScript.teams[team.id].players.status
+                        }
+
+                        playersRows.each(function(i) {
+                            var fields = $( "td", $(this) );
+                            var id = parseInt(beScript.Util.checkByRegExp( $( "a", $(fields[1]) ).attr( "href" ), /(\d+)/ )[1]);
+                            var player = beScript.getPlayerById( team, id );
+                            
+                            player.number = parseInt( $(fields[0]).text().trim() );
+                            player.name = $(fields[1]).text().trim();
+                            player.country = {};
+                            player.country.name = $( "img", $(fields[2]) ).attr( "title" ).trim();
+                            player.country.id = parseInt(beScript.Util.checkByRegExp( $( "img", $(fields[2]) ).attr( "src" ), /(\d+)\.gif/ )[1]);
+                            var pos = beScript.Util.checkByRegExp( $(fields[3]).text().trim(), /(\w+)\/?(\w+)?/ );
+                            player.primaryPosition = pos[1];
+                            player.secondaryPosition = pos[2];
+                            player.age = parseInt( $(fields[4]).text().trim() );
+                            player.morale = parseInt(beScript.Util.checkByRegExp($(fields[10]).attr("title"), /\d+/)[0]);
+                            player.bonuses = $(fields[11]).text().trim();
+                            var bonusPoints = beScript.Util.checkByRegExp( $(fields[12]).text().trim(), /(\d+)\((\d+)\)?/ );
+                            player.bonusPoints = parseInt(bonusPoints[1]);
+                            player.nextBonusPoints = parseInt(bonusPoints[2]);
+                            
+    /*                        beScript.log( "id = " + player.id 
+                                        + "; name = " + player.name 
+                                        + "; number = " + player.number 
+                                        + "; nationality = " + player.country.name + " (" + player.country.id + ")"
+                                        + "; position1 = " + player.primaryPosition + "; position2 = " + player.secondaryPosition 
+                                        + "; morale = " + player.morale 
+                                        + "; bonuses = " + player.bonuses 
+                                        + "; bonusPoints = " + player.bonusPoints + "; nextBonusAt = " + player.nextBonusPoints
+                                        + "; cost = " + player.cost
+                                        );*/
+                            
+                            teamPlayers[player.id] = player;
+                        });
                         
-                        beScript.log( "id = " + player.id 
-                                    + "; name = " + player.name 
-                                    + "; number = " + player.number 
-                                    + "; nationality = " + player.country.name + " (" + player.country.id + ")"
-                                    + "; position1 = " + player.primaryPosition + "; position2 = " + player.secondaryPosition 
-                                    + "; morale = " + player.morale 
-                                    + "; bonuses = " + player.bonuses 
-                                    + "; bonusPoints = " + player.bonusPoints + "; nextBonusAt = " + player.nextBonusPoints
-                                    + "; cost = " + player.cost
-                                    );
+                        teamPlayers.status |= 1;
+                        beScript.teams[team.id].players = teamPlayers;
+                        beScript.Util.serialize( "teams", beScript.teams );
+                    }
+                });
+            }
+            if ( (playersStatus & 2) == 0 ) {
+                $.ajax({
+                    url: "/xml/players/roster.php?id=" + team.id + "&act=parameters",
+                    success: function(data) {
+                        var playersTable = $($(".maintable", $(data))[2]);
+                        var playersRows = $( "tr[bgcolor='#ffffff'],tr[bgcolor='#EEF4FA']", playersTable );
+                        var teamPlayers = {
+                            status : beScript.teams[team.id].players.status
+                        };
+
+                        playersRows.each(function(i) {
+                            var fields = $( "td", $(this) );
+                            var id = parseInt(beScript.Util.checkByRegExp( $( "a", $(fields[1]) ).attr( "href" ), /(\d+)/ )[1]);
+                            var player = beScript.getPlayerById( team, id );
+                            
+                            player.talent = parseInt( $(fields[7]).text().trim() );
+                            player.expLevel = parseInt( $(fields[8]).text().trim() );
+                            player.salary = parseInt($(fields[10]).text().trim().replace( /\./g, "" ));
+                            player.cost = parseInt($(fields[12]).text().trim().replace( /\./g, "" ));
+                            
+                            teamPlayers[player.id] = player;
+                        });
                         
-                        teamPlayers[player.id] = player;
-                    });
-                    
-                    beScript.teams[team.id].players = teamPlayers;
-                    beScript.Util.serialize( "teams", beScript.teams );
-                }
-            });
-            $.ajax({
-                url: "/xml/players/roster.php?id=" + team.id + "&act=parameters",
-                success: function(data) {
-                    var playersTable = $($(".maintable", $(data))[2]);
-                    var playersRows = $( "tr[bgcolor='#ffffff'],tr[bgcolor='#EEF4FA']", playersTable );
-                    var teamPlayers = {};
-                    
-                    playersRows.each(function(i) {
-                        var fields = $( "td", $(this) );
-                        var id = parseInt(beScript.Util.checkByRegExp( $( "a", $(fields[1]) ).attr( "href" ), /(\d+)/ )[1]);
-                        var player = beScript.getPlayerById( team, id );
+                        teamPlayers.status |= 2;
+
+                        beScript.teams[team.id].players = teamPlayers;
+                        beScript.Util.serialize( "teams", beScript.teams );
+                    }
+                });
+            }
+            if ( (playersStatus & 4) == 0 ) {
+                $.ajax({
+                    url: "/xml/players/roster.php?id=" + team.id + "&act=exp",
+                    success: function(data) {
+                        var playersTable = $($(".maintable", $(data))[2]);
+                        var playersRows = $( "tr[bgcolor='#ffffff'],tr[bgcolor='#EEF4FA']", playersTable );
+                        var teamPlayers = {
+                            status : beScript.teams[team.id].players.status
+                        };
                         
-                        player.talent = parseInt( $(fields[7]).text().trim() );
-                        player.expLevel = parseInt( $(fields[8]).text().trim() );
-                        player.salary = parseInt($(fields[10]).text().trim().replace( /\./g, "" ));
-                        player.cost = parseInt($(fields[12]).text().trim().replace( /\./g, "" ));
+                        playersRows.each(function(i) {
+                            var fields = $( "td", $(this) );
+                            var id = parseInt(beScript.Util.checkByRegExp( $( "a", $(fields[1]) ).attr( "href" ), /(\d+)/ )[1]);
+                            var player = beScript.getPlayerById( team, id );
+                            
+                            var expPoints = beScript.Util.checkByRegExp( $(fields[10]).text().trim(), /(\d+)\((\d+)\)?/ );
+                            player.expPoints = parseInt(expPoints[1]);
+                            player.nextLevelExpPoints = parseInt(expPoints[2]);
+                            
+                            teamPlayers[player.id] = player;
+                        });
                         
-                        teamPlayers[player.id] = player;
-                    });
-                    
-                    beScript.teams[team.id].players = teamPlayers;
-                    beScript.Util.serialize( "teams", beScript.teams );
-                }
-            });
-            $.ajax({
-                url: "/xml/players/roster.php?id=" + team.id + "&act=exp",
-                success: function(data) {
-                    var playersTable = $($(".maintable", $(data))[2]);
-                    var playersRows = $( "tr[bgcolor='#ffffff'],tr[bgcolor='#EEF4FA']", playersTable );
-                    var teamPlayers = {};
-                    
-                    playersRows.each(function(i) {
-                        var fields = $( "td", $(this) );
-                        var id = parseInt(beScript.Util.checkByRegExp( $( "a", $(fields[1]) ).attr( "href" ), /(\d+)/ )[1]);
-                        var player = beScript.getPlayerById( team, id );
+                        teamPlayers.status |= 4;
+
+                        beScript.teams[team.id].players = teamPlayers;
+                        beScript.Util.serialize( "teams", beScript.teams );
+                    }
+                });
+            }
+            if ( (playersStatus & 8) == 0 ) {
+                $.ajax({
+                    url: "/xml/players/roster.php?id=" + team.id + "&act=abilities",
+                    success: function(data) {
+                        var playersTable = $($(".maintable", $(data))[2]);
+                        var playersRows = $( "tr[bgcolor='#ffffff'],tr[bgcolor='#EEF4FA']", playersTable );
+                        var teamPlayers = {
+                            status : beScript.teams[team.id].players.status
+                        };
                         
-                        var expPoints = beScript.Util.checkByRegExp( $(fields[10]).text().trim(), /(\d+)\((\d+)\)?/ );
-                        player.expPoints = parseInt(expPoints[1]);
-                        player.nextLevelExpPoints = parseInt(expPoints[2]);
+                        playersRows.each(function(i) {
+                            var fields = $( "td", $(this) );
+                            var id = parseInt(beScript.Util.checkByRegExp( $( "a", $(fields[1]) ).attr( "href" ), /(\d+)/ )[1]);
+                            var player = beScript.getPlayerById( team, id );
+                            
+                            player.power = parseFloat( $(fields[5]).text().trim() )
+                            player.tckl = parseFloat( $(fields[6]).text().trim() )
+                            player.mrk = parseFloat( $(fields[7]).text().trim() )
+                            player.drbl = parseFloat( $(fields[8]).text().trim() )
+                            player.brcv = parseFloat( $(fields[9]).text().trim() )
+                            player.edrnc = parseFloat( $(fields[10]).text().trim() )
+                            player.pass = parseFloat( $(fields[11]).text().trim() )
+                            player.shotPwr = parseFloat( $(fields[12]).text().trim() )
+                            player.shotAcc = parseFloat( $(fields[13]).text().trim() )
+                            
+                            teamPlayers[player.id] = player;
+                        });
                         
-                        teamPlayers[player.id] = player;
-                    });
-                    
-                    beScript.teams[team.id].players = teamPlayers;
-                    beScript.Util.serialize( "teams", beScript.teams );
-                }
-            });
-            $.ajax({
-                url: "/xml/players/roster.php?id=" + team.id + "&act=abilities",
-                success: function(data) {
-                    var playersTable = $($(".maintable", $(data))[2]);
-                    var playersRows = $( "tr[bgcolor='#ffffff'],tr[bgcolor='#EEF4FA']", playersTable );
-                    var teamPlayers = {};
-                    
-                    playersRows.each(function(i) {
-                        var fields = $( "td", $(this) );
-                        var id = parseInt(beScript.Util.checkByRegExp( $( "a", $(fields[1]) ).attr( "href" ), /(\d+)/ )[1]);
-                        var player = beScript.getPlayerById( team, id );
-                        
-                        player.power = parseFloat( $(fields[5]).text().trim() )
-                        player.tckl = parseFloat( $(fields[6]).text().trim() )
-                        player.mrk = parseFloat( $(fields[7]).text().trim() )
-                        player.drbl = parseFloat( $(fields[8]).text().trim() )
-                        player.brcv = parseFloat( $(fields[9]).text().trim() )
-                        player.edrnc = parseFloat( $(fields[10]).text().trim() )
-                        player.pass = parseFloat( $(fields[11]).text().trim() )
-                        player.shotPwr = parseFloat( $(fields[12]).text().trim() )
-                        player.shotAcc = parseFloat( $(fields[13]).text().trim() )
-                        
-                        teamPlayers[player.id] = player;
-                    });
-                    
-                    beScript.teams[team.id].players = teamPlayers;
-                    beScript.Util.serialize( "teams", beScript.teams );
-                }
-            });
+                        teamPlayers.status |= 8;
+
+                        beScript.teams[team.id].players = teamPlayers;
+                        beScript.Util.serialize( "teams", beScript.teams );
+                    }
+                });
+            }
         }
     },
     loadTeams : function( force ) {
         var _teams = beScript.Util.deserialize( "teams", {} );
-        
-        if ( force || _teams.length == 0 || beScript.Util.checkPeriod( "teamsUpdTime", beScript.TEAM_UPDATES_CHECK_FREQ * 1000 * 60 ) ) {
-            var teamOptions = $("select", beScript.menuElem.parent().parent()).children();
+        var teamOptions = $("select", beScript.menuElem.parent().parent()).children();
+        var teamOptionsA = $("a[href*='roster']", beScript.menuElem.parent().parent());
 
+        if ( (teamOptions.length != $(_teams).length || (teamOptions.length == 0 && teamOptionsA.length != _teams.length)) 
+            || force 
+            || _teams.length == 0
+            || beScript.Util.checkPeriod( "teamsUpdTime", beScript.TEAM_UPDATES_CHECK_FREQ * 1000 * 60 ) ) {
+            _teams = {};
+            
             for ( var i = 0; i < teamOptions.length; i++ ) {
                 var id = teamOptions[i].value;
                 _teams[id] = {};
                 _teams[id].name = teamOptions[i].innerHTML;
                 _teams[id].id = id;
-                beScript.loadTeamPlayers( _teams[id] );
+                _teams[id].players = {};
             }
             
             if ( teamOptions.length == 0 ) { // User has 1 team
-                teamOptions = $("a[href*='roster']", beScript.menuElem.parent().parent());
                 var id = beScript.Util.checkByRegExp( teamOptions.attr('href'), /(\d+)/ )[1];
 
                 _teams[id] = {};
                 _teams[id].name = teamOptions.text().trim();
                 _teams[id].id = id;
+                _teams[id].players = {};
                 beScript.loadTeamPlayers( _teams[id] );
             }
             
             beScript.Util.serialize( "teams", _teams );
+        }
+        
+        for ( var i in _teams ) {
+            beScript.log( "Updating players in " + _teams[i].name );
+            beScript.loadTeamPlayers( _teams[i], force );
         }
         
         beScript.teams = _teams;
@@ -646,12 +685,7 @@ beScript.organizer = {
             success: function(data) {
                 var a = beScript.organizer._parseMatchesPage(data);   
 
-                try {
-                    GM_setValue( beScript.NAMESPACE + ".organizer.team." + team.id, a.join("|"), {expiresInOneYear:true} );
-                } catch(e) {
-                    GM_setValue( beScript.NAMESPACE + ".organizer.team." + team.id, a.join("|") );
-                }
-
+                beScript.Util.serialize( "organizer.team." + team.id, a.join("|") );
                 beScript.organizer._addLastMatchesResults( team, a );
             }
         });
@@ -664,7 +698,7 @@ beScript.organizer = {
         
             tableheader.append("<td><span title=\"Результат последнего матча\"><b>Последний матч</b></span></td>");
             for ( var i in _teams ) {
-                var t = beScript.Util.deserialize( beScript.NAMESPACE + ".organizer.team." + _teams[i].id );
+                var t = beScript.Util.deserialize( "organizer.team." + _teams[i].id );
                 var teamtablerow = document.evaluate('//td[contains(.,"' + _teams[i].name + '") and parent::tr[@bgcolor="#ffffff" or @bgcolor="#EEF4FA"]]', document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null ).singleNodeValue.parentNode;
                 var teamMoney = teamtablerow.childNodes[4].textContent.replace(/[\.\s]/g,'');
 
@@ -977,7 +1011,6 @@ beScript.Update = {
 str_split = function(b,c){if(c===null){c=4000}if(b===null||c<1){return false}b+="";var e=[],d=0,a=b.length;while(d<a){e.push(b.slice(d,d+=c))}return e};
 
 // Redefenition of GM_ functions for safari && chrome + uneval
-//if(typeof GM_getValue==="undefined"){GM_getValue=function(b){var e=escape("_greasekit"+b)+"=",a=document.cookie.split(";");for(var d=0,f;d<a.length;d++){var f=a[d];while(f.charAt(0)==" "){f=f.substring(1,f.length)}if(f.indexOf(e)==0){return unescape(f.substring(e.length,f.length))}}return null}}else{if(GM_getValue.toString&&GM_getValue.toString().indexOf("not supported")>-1){GM_getValue=function(a,b){return localStorage[a]||b}}}if(typeof GM_setValue==="undefined"){GM_setValue=function(d,e,c){c=(c||{});if(c.expiresInOneYear){var a=new Date();a.setFullYear(a.getFullYear()+1,a.getMonth,a.getDay());c.expires=a}var b=escape("_greasekit"+d)+"="+escape(e)+((c.expires)?"; expires="+c.expires.toGMTString():"")+((c.path)?"; path="+c.path:"/")+((c.domain)?"; domain="+c.domain:"")+((c.secure)?"; secure":"");document.cookie=b}}else{if(GM_setValue.toString&&GM_setValue.toString().indexOf("not supported")>-1){GM_setValue=function(a,b){return localStorage[a]=b}}}if(typeof GM_addStyle==="undefined"){GM_addStyle=function(b){var a=document.createElement("style");a.setAttribute("type","text/css");a.appendChild(document.createTextNode(b));document.getElementsByTagName("head")[0].appendChild(a)}}if(typeof GM_log==="undefined"){GM_log=function(a){if(console){console.log(a)}else{alert(a)}}}if(typeof(this["uneval"])!=="function"){var hasOwnProperty=Object.prototype.hasOwnProperty;var protos=[];var char2esc={"\t":"t","\n":"n","\v":"v","\f":"f","\r":"\r","'":"'",'"':'"',"\\":"\\"};var escapeChar=function(b){if(b in char2esc){return"\\"+char2esc[b]}var a=b.charCodeAt(0);return a<32?"\\x0"+a.toString(16):a<127?"\\"+b:a<256?"\\x"+a.toString(16):a<4096?"\\u0"+a.toString(16):"\\u"+a.toString(16)};var uneval_asis=function(a){return a.toString()};var name2uneval={"boolean":uneval_asis,number:uneval_asis,string:function(a){return"'"+a.toString().replace(/[\x00-\x1F\'\"\\\u007F-\uFFFF]/g,escapeChar)+"'"}/*"*/,"undefined":function(a){return"undefined"},"function":uneval_asis};var uneval_default=function(d,b){var c=[];for(var a in d){if(!hasOwnProperty.call(d,a)){continue}c[c.length]=uneval(a)+":"+uneval(d[a],1)}return b?"{"+c.toString()+"}":"({"+c.toString()+"})"};uneval_set=function(c,a,b){protos[protos.length]=[c,a];name2uneval[a]=b||uneval_default};uneval_set(Array,"array",function(d){var c=[];for(var b=0,a=d.length;b<a;b++){c[b]=uneval(d[b])}return"["+c.toString()+"]"});uneval_set(RegExp,"regexp",uneval_asis);uneval_set(Date,"date",function(a){return"(new Date("+a.valueOf()+"))"});var typeName=function(d){var c=typeof d;if(c!="object"){return c}for(var b=0,a=protos.length;b<a;b++){if(d instanceof protos[b][0]){return protos[b][1]}}return"object"};uneval=function(c,b){if(c===null){return"null"}var a=name2uneval[typeName(c)]||uneval_default;return a(c,b)}};
 if((typeof GM_getValue==="undefined")||(GM_getValue.toString&&GM_getValue.toString().indexOf("not supported")>-1)){GM_getValue=function(a,b){return localStorage.getItem(a)||b}}if((typeof GM_setValue==="undefined")||(GM_setValue.toString&&GM_setValue.toString().indexOf("not supported")>-1)){GM_setValue=function(a,b){return localStorage.setItem(a,b)}}if(typeof GM_addStyle==="undefined"){GM_addStyle=function(b){var a=document.createElement("style");a.setAttribute("type","text/css");a.appendChild(document.createTextNode(b));document.getElementsByTagName("head")[0].appendChild(a)}}if(typeof GM_log==="undefined"){GM_log=function(a){if(console){console.log(a)}else{alert(a)}}}if(typeof(this["uneval"])!=="function"){var hasOwnProperty=Object.prototype.hasOwnProperty;var protos=[];var char2esc={"\t":"t","\n":"n","\v":"v","\f":"f","\r":"\r","'":"'",'"':'"',"\\":"\\"};var escapeChar=function(b){if(b in char2esc){return"\\"+char2esc[b]}var a=b.charCodeAt(0);return a<32?"\\x0"+a.toString(16):a<127?"\\"+b:a<256?"\\x"+a.toString(16):a<4096?"\\u0"+a.toString(16):"\\u"+a.toString(16)};var uneval_asis=function(a){return a.toString()};var name2uneval={"boolean":uneval_asis,number:uneval_asis,string:function(a){return"'"+a.toString().replace(/[\x00-\x1F\'\"\\\u007F-\uFFFF]/g,escapeChar)+"'"}/*"*/,"undefined":function(a){return"undefined"},"function":uneval_asis};var uneval_default=function(d,b){var c=[];for(var a in d){if(!hasOwnProperty.call(d,a)){continue}c[c.length]=uneval(a)+":"+uneval(d[a],1)}return b?"{"+c.toString()+"}":"({"+c.toString()+"})"};uneval_set=function(c,a,b){protos[protos.length]=[c,a];name2uneval[a]=b||uneval_default};uneval_set(Array,"array",function(d){var c=[];for(var b=0,a=d.length;b<a;b++){c[b]=uneval(d[b])}return"["+c.toString()+"]"});uneval_set(RegExp,"regexp",uneval_asis);uneval_set(Date,"date",function(a){return"(new Date("+a.valueOf()+"))"});var typeName=function(d){var c=typeof d;if(c!="object"){return c}for(var b=0,a=protos.length;b<a;b++){if(d instanceof protos[b][0]){return protos[b][1]}}return"object"};uneval=function(c,b){if(c===null){return"null"}var a=name2uneval[typeName(c)]||uneval_default;return a(c,b)}};
 
 // jQuery plugin - qTip 2 nightly build
