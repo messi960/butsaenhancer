@@ -5,6 +5,7 @@
 // @include http://butsa.ru/*
 // @include http://*.champions.ru/*
 // @include http://champions.ru/*
+// @include http://kovpas.ru/*
 // ==/UserScript==
 
 Player = function() {
@@ -38,7 +39,7 @@ Player = function() {
 };
 
 var beScript = {
-	VERSION : "0.0.9",
+	VERSION : "0.0.10",
     NAMESPACE : "butsa_enhancer",
     UPDATES_CHECK_FREQ : 15, //minutes
     TEAM_UPDATES_CHECK_FREQ : 60 * 24, // minutes; recommended value is 60 * 24 = 1440 = 1 day.
@@ -216,11 +217,20 @@ var beScript = {
         if ( force || _teams.length == 0 || beScript.Util.checkPeriod( "teamsUpdTime", beScript.TEAM_UPDATES_CHECK_FREQ * 1000 * 60 ) ) {
             var teamOptions = $("select", beScript.menuElem.parent().parent()).children();
 
-            for ( var i = 0; i < teamOptions.length; i++ )
-            {
+            for ( var i = 0; i < teamOptions.length; i++ ) {
                 var id = teamOptions[i].value;
                 _teams[id] = {};
                 _teams[id].name = teamOptions[i].innerHTML;
+                _teams[id].id = id;
+                beScript.loadTeamPlayers( _teams[id] );
+            }
+            
+            if ( teamOptions.length == 0 ) { // User has 1 team
+                teamOptions = $("a[href*='roster']", beScript.menuElem.parent().parent());
+                var id = beScript.Util.checkByRegExp( teamOptions.attr('href'), /(\d+)/ )[1];
+
+                _teams[id] = {};
+                _teams[id].name = teamOptions.text().trim();
                 _teams[id].id = id;
                 beScript.loadTeamPlayers( _teams[id] );
             }
