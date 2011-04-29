@@ -25,6 +25,8 @@ Player = function() {
     this.nextLevelExpPoints = -1;
     this.salary = -1;
     this.cost = -1;
+    this.salary_txt = -1;
+    this.cost_txt = -1;
     this.power = -1;
     
     this.tckl = -1;
@@ -90,6 +92,36 @@ var beScript = {
         17 : {name: "Универсал", abbr: "Ун"},
         18 : {name: "Один на один", abbr: "Од", gk: true, fpl: false},
         19 : {name: "От ворот", abbr: "Ов", gk: true, fpl: false},
+        
+        nextBonus : function( numberOfBonuses ) {
+            if (numberOfBonuses < 3) {
+                return 7;
+            }
+            var curr = 7;
+            var prev = 7;
+            for ( var i = 0; i < numberOfBonuses - 2; i++ ) {
+                var prev1 = curr;
+                curr += prev;
+                prev = prev1;
+            }
+            
+            return curr;
+        },
+        createBonusStr : function( bonuses ) {
+            var result = "";
+            for ( var i in bonuses ) {
+                if ( i == 'str' ) continue;
+                result += i;
+                
+                if ( bonuses[i] > 1 ) {
+                    result += bonuses[i];
+                }
+                
+                result += " ";
+            }
+            beScript.log( result );
+            return result.trim();
+        },
     },
     bonusesByAbbr : null,
     getPlayerById : function( team, id ) {
@@ -143,19 +175,18 @@ var beScript = {
                             player.morale = parseInt(beScript.Util.checkByRegExp($(fields[10]).attr("title"), /\d+/)[0]);
                             var bonusesStr = $(fields[11]).text().trim();
 
-                            /*if ( bonusesStr.length > 0 ) {
+                            if ( bonusesStr.length > 0 ) {
                                 var bonuses = bonusesStr.split( /\s/ );
-                                player.bonuses = {};
+                                player.bonuses = {str:bonusesStr};
 
                                 for ( var k = 0; k < bonuses.length; k++ ) {
                                     var bonusArr = beScript.Util.checkByRegExp( bonuses[k], /(.{2})(\d)?/ );
                                     var bonus = beScript.bonusesByAbbr[bonusArr[1]];
-                                    var level = bonusArr[2] || 0;
+                                    var level = bonusArr[2] || 1;
                                     
-                                    player.bonuses[bonus.id] = level
+                                    player.bonuses[bonus.abbr] = level
                                 }
-                            }*/
-                            player.bonuses = bonusesStr;
+                            }
                             
                             var bonusPoints = beScript.Util.checkByRegExp( $(fields[12]).text().trim(), /(\d+)\((\d+)\)?/ );
                             player.bonusPoints = parseInt(bonusPoints[1]);
@@ -198,8 +229,10 @@ var beScript = {
                             
                             player.talent = parseInt( $(fields[7]).text().trim() );
                             player.expLevel = parseInt( $(fields[8]).text().trim() );
-                            player.salary = parseInt($(fields[10]).text().trim().replace( /\./g, "" ));
-                            player.cost = parseInt($(fields[12]).text().trim().replace( /\./g, "" ));
+                            player.salary_txt = $(fields[10]).text().trim();
+                            player.salary = parseInt(player.salary_txt.replace( /\./g, "" ));
+                            player.cost_txt = $(fields[12]).text().trim();
+                            player.cost = parseInt(player.cost_txt.replace( /\./g, "" ));
                             
                             teamPlayers[player.id] = player;
                         });
@@ -326,6 +359,7 @@ var beScript = {
         beScript.bonusesByAbbr = {};
         for ( var id in beScript.bonuses ) {
             var bonus = beScript.bonuses[id];
+            if ( typeof bonus == 'function' ) continue;
             bonus.id = id;
             
             beScript.bonusesByAbbr[bonus.abbr] = bonus;
@@ -411,16 +445,17 @@ beScript.Util = {
         }); 
         
         GM_addStyle( "th.headerSortUp { color:red; } th.headerSortDown { color:green; } th { background-color: #D3E1EC;}" )
-        GM_addStyle( ".ui-tooltip-dark {min-width:380px}.ui-tooltip-dark a:visited{color:white} .ui-tooltip-dark a:link{color:white} .ui-tooltip-dark table {margin-top:0px;width:200px} .ui-tooltip-dark td {width:110px}" );
+        GM_addStyle( ".ui-tooltip-player {min-width:380px} .ui-tooltip-player a:visited{color:white} .ui-tooltip-player a:link{color:white} .ui-tooltip-player table {margin-top:0px;width:200px} .ui-tooltip-player td {width:110px}" );
+        GM_addStyle( ".ui-tooltip-bonus {min-width:150px}.ui-tooltip-bonus a:visited{color:white} .ui-tooltip-bonus a:link{color:white} .ui-tooltip-bonus table {margin-top:0px;width:150px} .ui-tooltip-bonus td {width:150px}" );
 
         var tmpl1 = "<table style='color:white'>" +
         "<tr><td style='width:80px'>Талант</td><td>${talent} + ${expLevel / 10} = ${talent + expLevel / 10}</td></tr>" +
         "<tr><td style='width:80px'>Очки опыта</td><td>${expPoints} / ${nextLevelExpPoints} = ${Math.round(expPoints / nextLevelExpPoints * 100)}%</td></tr>" +
         "<tr><td style='width:80px'>Возраст</td><td>${age}</td></tr>" +
         "<tr><td style='width:80px'>Позиция</td><td>${primaryPosition}{{if secondaryPosition}}/${secondaryPosition}{{/if}}</td></tr>" +
-        "<tr><td style='width:80px'>Зарплата</td><td>${salary}</td></tr>" +
-        "<tr><td style='width:80px'>Стоимость</td><td>${cost}</td></tr>" +
-        "<tr><td style='width:80px'>Бонусы</td><td>${bonuses}</td></tr>" +
+        "<tr><td style='width:80px'>Зарплата</td><td>${salary_txt}</td></tr>" +
+        "<tr><td style='width:80px'>Стоимость</td><td>${cost_txt}</td></tr>" +
+        "{{if $(bonuses).size() > 0 }}<tr><td style='width:80px'>Бонусы</td><td>${bonuses.str}</td></tr>{{/if}}" +
         "<tr><td style='width:80px'>Очки бонусов</td><td>${bonusPoints} / ${nextBonusPoints} = ${Math.round(bonusPoints / nextBonusPoints * 100)}%</td></tr>" +
         "<tr><td style='width:80px'>Мораль</td><td>${morale}</td></tr></table>";
         
@@ -428,7 +463,7 @@ beScript.Util = {
         "<tr><td>Мастерство</td><td>${power}</td></tr>" +
         "<tr><td>Отбор</td><td>${tckl}</td></tr>" +
         "<tr><td>Опека</td><td>${mrk}</td></tr>" +
-        "<tr><td>Дрибблинг</td><td>${drbl}</td></tr>" +
+        "<tr><td>Дриблинг</td><td>${drbl}</td></tr>" +
         "<tr><td>Прием мяча</td><td>${brcv}</td></tr>" +
         "<tr><td>Выносливость</td><td>${edrnc}</td></tr>" +
         "<tr><td>Пас</td><td>${pass}</td></tr>" +
@@ -772,11 +807,107 @@ beScript.organizer = {
 };
 
 beScript.roster = {
-    addPlayersTips : function() {
+    makeBonusPointsClickable : function(playersTable) {
+        $( "a[href*='act=bonus']", playersTable ).each(function() {
+            var td = $(this).parent().parent().parent();
+            var bonusA = $(this);
+            var playerId = parseInt(beScript.Util.checkByRegExp( $(this).attr( "href" ), /(\d+)/ )[1]);
+            
+            td.qtip({
+                id : 'beScript_act_bonus' + playerId,
+                position: {
+                    my : 'left center',  // Position my top left...
+                    at : 'right center', // at the bottom right of...
+                },
+                hide: { 
+                    delay : 200,
+                    fixed : true
+                },
+                show: { 
+                    delay : 200,
+                    solo : true,
+                    effect: function(offset) {
+                        $(this).slideDown(100);
+                    }
+                },
+                events: {
+                    show: function(event, api) {
+                        var currteamid = $( "input[name='id']" ).attr( "value" );
+                        var team = beScript.teams[currteamid];
+                        var player = team.players[playerId];
+                        var value = $("<table/>").append( "<tbody/>" );
+                        var isGk = (player.primaryPosition == 'Gk');
+                        var overallBonusLevel = 0;
+                        
+                        for ( var i in player.bonuses ) {
+                            if ( i == 'str' ) continue;
+                            overallBonusLevel += player.bonuses[i];
+                        }
+                        
+                        beScript.log(overallBonusLevel);
+
+                        for (var k in beScript.bonusesByAbbr ) {
+                            var bonus = beScript.bonusesByAbbr[k];
+                            
+                            if ( player.bonuses[bonus.abbr] == 5 ) {
+                                continue;
+                            }
+
+                            if ( (isGk && bonus.gk) || (!isGk && !(bonus.fpl === false)) ) {
+                                var a = $( "<a href='javascript:void(" + bonus.id + ")'/>" );
+                                a.text( bonus.name );
+
+                                a.click(function() {
+                                    var bns = beScript.bonuses[beScript.Util.checkByRegExp( $(this).attr( "href" ), /(\d+)/ )[1]];
+                                    api.hide();
+                                    api.destroy();
+                                    $.ajax({
+                                        type: "POST",
+                                        url: "/xml/players/info.php?type=players/profile&act=bonus",
+                                        data: "step=1&oldact=bonus&act=bonus&NewBonus=" + bns.id + "&type=players/profile&firstpage=/xml/players/info.php?act=bonus&id=" + playerId,
+                                        success: function( data ) {
+                                            player.bonusPoints -= player.nextBonusPoints;
+                                            player.nextBonusPoints = beScript.bonuses.nextBonus( overallBonusLevel + 1 );
+
+                                            if ( player.bonuses[bns.abbr] ) {
+                                                player.bonuses[bns.abbr] += 1;
+                                            } else {
+                                                player.bonuses[bns.abbr] = 1;
+                                            }
+                                            
+                                            player.bonuses.str = beScript.bonuses.createBonusStr( player.bonuses );
+                                            bonusA.parent().html( player.bonusPoints + "(" + player.nextBonusPoints + ")" );
+                                            td.prev().html( "<center>" + player.bonuses.str + "</center>" );
+                                            beScript.teams[currteamid].players[playerId] = player;
+                                            beScript.Util.serialize( "teams", beScript.teams );
+                                        }
+                                    });
+                                });
+                                
+                                var val = $("<tr/>").append( $("<td/>").append(a) );
+                                value.append( val );
+                            }
+                        }
+                        
+                        api.set('content.text', value);
+                        api.set('content.title.text', "<table><tr><td style='width:20px'><img src='/images/flag/" + player.country.id + ".gif'/></td><td style='padding-bottom:4px'><a ' href='/players/" + player.id + "'>" + player.name + "</a></td></tr></table>" );
+                    }
+                },
+                content : {
+                    title : "-",
+                    text : "-"
+                },
+                style: {
+                    classes: 'ui-tooltip-dark ui-tooltip-shadow ui-tooltip-bonus',
+                }                    
+            });
+        });
+    },
+    addPlayersTips : function(playersTable) {
         var currteamid = $( "input[name='id']" ).attr( "value" );
         var team = beScript.teams[currteamid];
+        
         if ( team ) {
-            var playersTable = $($(".maintable")[2]);
             var playersRows = $( "tr[bgcolor='#ffffff'],tr[bgcolor='#EEF4FA']", $( "tbody", playersTable ) );
             
             playersRows.each(function(i) {
@@ -804,8 +935,7 @@ beScript.roster = {
                         show: function(event, api) {
                             var currteamid = $( "input[name='id']" ).attr( "value" );
                             var team = beScript.teams[currteamid];
-                            var id = beScript.Util.checkByRegExp( this.id, /(\d+)/ )[1];
-                            var player = team.players[id];
+                            var player = team.players[playerId];
                             var value = $.tmpl( "playerDetailsTemplate", player );
                             api.set('content.text', value);
                             api.set('content.title.text', "<table><tr><td style='width:20px'><img src='/images/flag/" + player.country.id + ".gif'/></td><td style='padding-bottom:4px'><a ' href='/players/" + player.id + "'>" + player.name + "</a></td></tr></table>" );
@@ -816,14 +946,14 @@ beScript.roster = {
                         text : "-"
                     },
                     style: {
-                        classes: 'ui-tooltip-dark ui-tooltip-shadow',
+                        classes: 'ui-tooltip-dark ui-tooltip-shadow ui-tooltip-player',
                         width:500
                     }                    
                 });
             });
         }
     },
-    makeC11Links : function() {
+    makeTeamInfoLinks : function() {
         var division = $("input[name='Division']").attr( "value" );
         if ( division ) {
             var divisionId = beScript.Util.checkByRegExp(division, /division=(\d+)/)[1];
@@ -831,6 +961,18 @@ beScript.roster = {
             powerSpan.wrap( "<a href='http://www.butsa.ru/xml/ratings/ratings.php?class=1&id=1&Division=" + divisionId + "' />" );
             var power11Span = $("input[name='Power11']").next();
             power11Span.wrap( "<a href='http://www.butsa.ru/xml/ratings/ratings.php?class=1&id=28&Division=" + divisionId + "' />" );
+            var moneyInput = $("input[name='Money']");
+            var moneytd = moneyInput.parent();
+            var money = moneytd.text();
+            moneytd.empty();
+            moneytd.append(moneyInput);
+            moneyInput.after( "<a href='http://www.butsa.ru/xml/ratings/ratings.php?class=1&id=6&Division=" + divisionId + "'>" + money + "</a>" );
+            var visRatSpan = $("input[name='VisRat']").next();
+            visRatSpan.wrap( "<a href='http://www.butsa.ru/xml/ratings/ratings.php?class=1&id=29&Division=" + divisionId + "' />" );
+            var stadiumSpan = $("input[name='Stadium']").next();
+            stadiumSpan.wrap( "<a href='http://www.butsa.ru/xml/ratings/ratings.php?class=1&id=7&Division=" + divisionId + "' />" );
+            var playersSpan = $("input[name='Players']").next();
+            playersSpan.wrap( "<a href='http://www.butsa.ru/xml/ratings/ratings.php?class=1&id=3&Division=" + divisionId + "' />" );
         }
     },
     process : function() {
@@ -862,8 +1004,9 @@ beScript.roster = {
         }
 
         beScript.Util.makeTableSortable( "roster", playersTable, _headers, [3, 0], 1 );
-        beScript.roster.makeC11Links();
-        beScript.roster.addPlayersTips();
+        beScript.roster.makeTeamInfoLinks();
+        beScript.roster.addPlayersTips(playersTable);
+        beScript.roster.makeBonusPointsClickable(playersTable);
     }
 };
 
