@@ -40,7 +40,7 @@ Player = function() {
 };
 
 var beScript = {
-	VERSION : "0.0.13",
+	VERSION : "0.0.14",
     NAMESPACE : "butsa_enhancer",
     UPDATES_CHECK_FREQ : 15, //minutes
     TEAM_UPDATES_CHECK_FREQ : 60 * 24, // minutes; recommended value is 60 * 24 = 1440 = 1 day.
