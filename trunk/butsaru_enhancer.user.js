@@ -38,7 +38,7 @@ Player = function() {
 };
 
 var beScript = {
-	VERSION : "0.0.12",
+	VERSION : "0.0.13",
     NAMESPACE : "butsa_enhancer",
     UPDATES_CHECK_FREQ : 15, //minutes
     TEAM_UPDATES_CHECK_FREQ : 60 * 24, // minutes; recommended value is 60 * 24 = 1440 = 1 day.
@@ -70,6 +70,28 @@ var beScript = {
         "Cf" : 16,
         "Rf" : 17
     },
+    bonuses : {
+        1 : {name: "Скорость", abbr: "Ск"},
+        2 : {name: "Атлетизм", abbr: "Ат"},
+        3 : {name: "Технарь", abbr: "Тх"},
+        4 : {name: "Плеймейкер", abbr: "Пл"},
+//      5 : {name: "", abbr: ""},
+        6 : {name: "Перехват", abbr: "Пр"},
+        7 : {name: "Подкат", abbr: "Пд"},
+        8 : {name: "Навесы", abbr: "Нв"},
+        9 : {name: "Игра головой", abbr: "Гл"},
+        10 : {name: "Пенальти", abbr: "Пн", gk: true},
+//      11 : {name: "", abbr: ""},
+        12 : {name: "Штрафные", abbr: "Шт", gk: true},
+        13 : {name: "Угловые", abbr: "Уг", gk: true},
+        14 : {name: "Ауты", abbr: "Ау"},
+//      15 : {name: "", abbr: ""},
+        16 : {name: "Лидер", abbr: "Лд", gk: true},
+        17 : {name: "Универсал", abbr: "Ун"},
+        18 : {name: "Один на один", abbr: "Од", gk: true, fpl: false},
+        19 : {name: "От ворот", abbr: "Ов", gk: true, fpl: false},
+    },
+    bonusesByAbbr : null,
     getPlayerById : function( team, id ) {
         var players = beScript.teams[team.id].players;
         var player = null;
@@ -86,10 +108,11 @@ var beScript = {
     loadTeamPlayers : function( team, force) {
         var playersLoaded = ($(team.players).length > 0);
         var timeUpdaterFired = beScript.Util.checkPeriod( "teamsUpdTime", beScript.TEAM_UPDATES_CHECK_FREQ * 1000 * 60 );
-        var playersStatus = (playersLoaded && !timeUpdaterFired && !force)?team.players.status:0;
-
-        if ( !playersLoaded || timeUpdaterFired || playersStatus != 15 ) {
-            if ( (playersStatus & 1) == 0 ) {
+        team.players.status = (playersLoaded && !timeUpdaterFired && !force)?team.players.status:0;
+        beScript.log( "!" + team.players.status );
+        
+        if ( !playersLoaded || timeUpdaterFired || team.players.status != 15 ) {
+            if ( (team.players.status & 1) == 0 ) {
                 $.ajax({
                     url: "/roster/" + team.id,
                     success: function(data) {
@@ -118,7 +141,22 @@ var beScript = {
                             player.secondaryPosition = pos[2];
                             player.age = parseInt( $(fields[4]).text().trim() );
                             player.morale = parseInt(beScript.Util.checkByRegExp($(fields[10]).attr("title"), /\d+/)[0]);
-                            player.bonuses = $(fields[11]).text().trim();
+                            var bonusesStr = $(fields[11]).text().trim();
+
+                            /*if ( bonusesStr.length > 0 ) {
+                                var bonuses = bonusesStr.split( /\s/ );
+                                player.bonuses = {};
+
+                                for ( var k = 0; k < bonuses.length; k++ ) {
+                                    var bonusArr = beScript.Util.checkByRegExp( bonuses[k], /(.{2})(\d)?/ );
+                                    var bonus = beScript.bonusesByAbbr[bonusArr[1]];
+                                    var level = bonusArr[2] || 0;
+                                    
+                                    player.bonuses[bonus.id] = level
+                                }
+                            }*/
+                            player.bonuses = bonusesStr;
+                            
                             var bonusPoints = beScript.Util.checkByRegExp( $(fields[12]).text().trim(), /(\d+)\((\d+)\)?/ );
                             player.bonusPoints = parseInt(bonusPoints[1]);
                             player.nextBonusPoints = parseInt(bonusPoints[2]);
@@ -143,7 +181,7 @@ var beScript = {
                     }
                 });
             }
-            if ( (playersStatus & 2) == 0 ) {
+            if ( (team.players.status & 2) == 0 ) {
                 $.ajax({
                     url: "/xml/players/roster.php?id=" + team.id + "&act=parameters",
                     success: function(data) {
@@ -173,7 +211,7 @@ var beScript = {
                     }
                 });
             }
-            if ( (playersStatus & 4) == 0 ) {
+            if ( (team.players.status & 4) == 0 ) {
                 $.ajax({
                     url: "/xml/players/roster.php?id=" + team.id + "&act=exp",
                     success: function(data) {
@@ -202,7 +240,7 @@ var beScript = {
                     }
                 });
             }
-            if ( (playersStatus & 8) == 0 ) {
+            if ( (team.players.status & 8) == 0 ) {
                 $.ajax({
                     url: "/xml/players/roster.php?id=" + team.id + "&act=abilities",
                     success: function(data) {
@@ -243,10 +281,14 @@ var beScript = {
         var _teams = beScript.Util.deserialize( "teams", {} );
         var teamOptions = $("select", beScript.menuElem.parent().parent()).children();
         var teamOptionsA = $("a[href*='roster']", beScript.menuElem.parent().parent());
+        var count = 0;
+        for ( var i in _teams ) {
+            count++;
+        }
 
-        if ( (teamOptions.length != $(_teams).length || (teamOptions.length == 0 && teamOptionsA.length != _teams.length)) 
+        if ( (teamOptions.length != count || (teamOptions.length == 0 && teamOptionsA.length != count)) 
             || force 
-            || _teams.length == 0
+            || count == 0
             || beScript.Util.checkPeriod( "teamsUpdTime", beScript.TEAM_UPDATES_CHECK_FREQ * 1000 * 60 ) ) {
             _teams = {};
             
@@ -255,16 +297,16 @@ var beScript = {
                 _teams[id] = {};
                 _teams[id].name = teamOptions[i].innerHTML;
                 _teams[id].id = id;
-                _teams[id].players = {};
+                _teams[id].players = {status:0};
             }
             
             if ( teamOptions.length == 0 ) { // User has 1 team
-                var id = beScript.Util.checkByRegExp( teamOptions.attr('href'), /(\d+)/ )[1];
+                var id = beScript.Util.checkByRegExp( teamOptionsA.attr('href'), /(\d+)/ )[1];
 
                 _teams[id] = {};
-                _teams[id].name = teamOptions.text().trim();
+                _teams[id].name = teamOptionsA.text().trim();
                 _teams[id].id = id;
-                _teams[id].players = {};
+                _teams[id].players = {status:0};
                 beScript.loadTeamPlayers( _teams[id] );
             }
             
@@ -280,9 +322,19 @@ var beScript = {
         
         return _teams;
     },
+    initBonusesByAbbr : function() {
+        beScript.bonusesByAbbr = {};
+        for ( var id in beScript.bonuses ) {
+            var bonus = beScript.bonuses[id];
+            bonus.id = id;
+            
+            beScript.bonusesByAbbr[bonus.abbr] = bonus;
+        }
+    },
     init : function() {
         beScript.log( "jQuery version: " + $().jquery );
         beScript.addBeScriptHeader();
+        beScript.initBonusesByAbbr();
         beScript.loadTeams();
         beScript.Update.init();
         beScript.Util.init();
@@ -318,10 +370,10 @@ var beScript = {
         }
         
         beScript.menuElem = $("#beScript_menu");
-/*        beScript.menuElem.click( function() {
+        beScript.menuElem.click( function() {
             beScript.log( "Force teams loading" );
             beScript.loadTeams( true );
-        });*/
+        });
 /*        beScript.menuElem.qtip({
             id:'beScript_menu_tooltip',
             content:{
@@ -921,12 +973,15 @@ beScript.Update = {
 		var _t = this;
 		var url = 'http://butsaenhancer.googlecode.com/svn/trunk/version.txt';
 		var randSeed = Math.floor(1 + (9999) * Math.random());
-
+        var latestVersion = beScript.Util.deserialize( "latestVersion" );
+        
         this.init = function() {
-			if (beScript.Util.checkPeriod("updTime", updTime)) {
+			if (beScript.Util.checkPeriod("updTime", updTime) || !latestVersion) {
 				beScript.log("update check");
 				this.check();
-			}
+			} else if ( latestVersion != beScript.VERSION ) {
+                this.update( latestVersion );
+            }
 		};
 
 		this.check = function() {
@@ -955,6 +1010,7 @@ beScript.Update = {
 		};
 
 		this.update = function(checkver) {
+                beScript.Util.serialize( "latestVersion", checkver.trim() );
                 vnum = checkver;
                 checkver = checkver.split('.');
 
@@ -1040,6 +1096,7 @@ function runBEScript() {
         beScript.init();
     } catch (e) {
         beScript.log( "+" + e );
+        beScript.log( e.stack );
     }
 }
 
