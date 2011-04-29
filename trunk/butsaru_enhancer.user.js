@@ -370,10 +370,10 @@ var beScript = {
         }
         
         beScript.menuElem = $("#beScript_menu");
-        beScript.menuElem.click( function() {
+/*        beScript.menuElem.click( function() {
             beScript.log( "Force teams loading" );
             beScript.loadTeams( true );
-        });
+        });*/
 /*        beScript.menuElem.qtip({
             id:'beScript_menu_tooltip',
             content:{
