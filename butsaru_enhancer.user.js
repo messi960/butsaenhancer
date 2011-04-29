@@ -40,11 +40,35 @@ Player = function() {
 };
 
 var beScript = {
-	VERSION : "0.0.14",
+	VERSION : "0.0.15",
     NAMESPACE : "butsa_enhancer",
     UPDATES_CHECK_FREQ : 15, //minutes
     TEAM_UPDATES_CHECK_FREQ : 60 * 24, // minutes; recommended value is 60 * 24 = 1440 = 1 day.
     S_ID : 101727,
+    settings : {
+        menu_helper_shown : false,
+        // Sorts
+        sorts_roster : true,
+        sorts_school : true,
+        sorts_tournament_table : true,
+        
+        // Helpers
+        helpers_profile : true,
+        helpers_bonuses : true,
+        
+        // Other
+        links_in_roster : true,
+        kp_helper : true,
+        last_matches_in_organizer : true,
+    },
+    updateSetting : function( name, value ) {
+        beScript.log( "Updating settings: old value = " + beScript.settings[name] + " new vaule = " + value );
+        
+        if ( beScript.settings[name] != value ) {
+            beScript.settings[name] = value;
+            beScript.Util.serialize( "settings", beScript.settings );
+        }
+    },
     menuElem : null,
     teams : null,
     debug : true,
@@ -367,7 +391,8 @@ var beScript = {
     },
     init : function() {
         beScript.log( "jQuery version: " + $().jquery );
-        beScript.addBeScriptHeader();
+        beScript.settings = beScript.Util.deserialize( "settings", beScript.settings )
+        beScript.addBeScriptMenu();
         beScript.initBonusesByAbbr();
         beScript.loadTeams();
         beScript.Update.init();
@@ -394,26 +419,124 @@ var beScript = {
             beScript.tournaments.process();
         }
 	},
-    addBeScriptHeader : function() {
+    addBeScriptMenu : function() {
         if ( $("#beScript_menu").length == 0 ) {
             var greetingTd = $(".autoten");
             greetingTd.attr( "width", "800" );
             greetingTd.before( "<td width='160' id='beScript_td'/>" );
             var beScript_td = $( "#beScript_td" );
-            beScript_td.html( "<span id='beScript_menu' style='margin-left:20px;color:grey;'>beScript (" + beScript.VERSION + ")</span>" );
+            beScript_td.html( "<span id='beScript_menu' style='margin-left:20px;color:white;text-decoration:underline'>beScript (v" + beScript.VERSION + ")</span>" );
         }
         
         beScript.menuElem = $("#beScript_menu");
-/*        beScript.menuElem.click( function() {
-            beScript.log( "Force teams loading" );
-            beScript.loadTeams( true );
-        });*/
-/*        beScript.menuElem.qtip({
-            id:'beScript_menu_tooltip',
-            content:{
-                text:"test"
+        
+        var _addMenu = function() {
+            var content = $("<div/>");
+            content.css( "color:white" );
+            
+            this.createCheckboxWithIdAndText = function( id, text, _function, wrapStyle, on, title ) {
+                var result = $( "<div />" );
+                
+                if ( wrapStyle ) {
+                    result.attr( "style", wrapStyle );
+                }
+                
+                result.append( "<input type='checkbox' id='" + id + "' " + ((on)?"checked":"") + "/>", "<label id='" + id + "_label' for='" + id + "'" + ((title)?" title='" + title + "'":"") + ">" + text + "</label>" );
+                $( "#" + id + "", result ).change(_function || function() {
+                    beScript.updateSetting( $(this).attr("id"), $(this).attr("checked") );
+                });
+                return result;
+            };
+            
+            var sortsDiv = $( "<div id='sorts_div' />" );
+            sortsDiv.append( "<span style='font-size:12px'>\"Умная\" сортировка</span>" );
+            
+            sortsDiv.append( this.createCheckboxWithIdAndText( "sorts_roster", "В ростере основы", null, "", beScript.settings["sorts_roster"] ) );
+            sortsDiv.append( this.createCheckboxWithIdAndText( "sorts_school", "В ростере ДЮСШ", null, "", beScript.settings["sorts_school"] ) );
+            sortsDiv.append( this.createCheckboxWithIdAndText( "sorts_tournament_table", "В таблице дивизиона", null, "", beScript.settings["sorts_tournament_table"] ) );
+            
+            if (beScript.settings["sorts_roster"] && beScript.settings["sorts_school"] && beScript.settings["sorts_tournament_table"] ) {
+                $( "input[id='all_sorts']", sortsDiv ).attr( "checked", "true" );
             }
-        });*/
+            
+            content.append( sortsDiv, "<br />" );
+
+
+            var helpersDiv = $( "<div id='helpers_div' />" );
+            helpersDiv.append( "<span style='font-size:12px'>Всплывающие окошки</span>" );
+            
+            helpersDiv.append( this.createCheckboxWithIdAndText( "helpers_profile", "Профайл в ростере", null, "", beScript.settings["helpers_profile"] ) );
+            helpersDiv.append( this.createCheckboxWithIdAndText( "helpers_bonuses", "Бонусы в ростере", null, "", beScript.settings["helpers_bonuses"], "Если набрано 100% бонусных очков" ) );
+            
+            content.append( helpersDiv, "<br />" );
+
+            var otherDiv = $( "<div id='other_div' />" );
+            otherDiv.append( "<span style='font-size:12px'>Прочее</span>" );
+
+            otherDiv.append( this.createCheckboxWithIdAndText( "links_in_roster", "Ссылки в ростере", null, "", beScript.settings["links_in_roster"] ) );
+            otherDiv.append( this.createCheckboxWithIdAndText( "kp_helper", "Помощник в КП", null, "", beScript.settings["links_in_roster"] ) );
+            otherDiv.append( this.createCheckboxWithIdAndText( "last_matches_in_organizer", "Результаты матчей в органайзере", null, "", beScript.settings["last_matches_in_organizer"] ) );
+            
+            content.append( otherDiv );
+
+            beScript.menuElem.qtip({
+                id:'beScript_menu_tooltip',
+                position: {
+                    my: 'center',
+                    at: 'center',
+                    target: $(window)
+                },
+                hide: false,
+                show: { 
+                    modal: {
+                        onload : true,
+                    },
+                    solo: true,
+                    event: 'click',
+                },
+                content: {
+                    title: {
+                        text: "beScript (v" + beScript.VERSION + ") :: Настройки",
+                        button: true,
+                    },
+                    text: content
+                },
+                style: 'ui-tooltip-dark ui-tooltip-rounded beScript-menu',
+                events: {
+                    show : function( event, api ) {
+                        beScript.updateSetting( "menu_helper_shown", true );
+                    }
+                }
+            });
+        }
+                
+        if ( beScript.settings.menu_helper_shown !== true ) {
+            beScript.menuElem.qtip({
+                id:'beScript_menu_helper_tooltip',
+                position: {
+                    my : 'left center',  // Position my top left...
+                    at : 'right center', // at the bottom right of...
+                },
+                show: {
+                    ready: true
+                },
+                content: {
+                    text: "Нажми меня!"
+                },
+                style: 'ui-tooltip-dark ui-tooltip-rounded',
+                events: {
+                    show : function( event, api ) {
+                        var timeout = 1300; //ms 
+                        setTimeout((function() {
+                            api.hide();
+                            _addMenu();
+                        }), timeout);
+                    },
+                }
+            });
+        } else {
+            _addMenu();
+        }
     },
 };
 
@@ -447,6 +570,7 @@ beScript.Util = {
         GM_addStyle( "th.headerSortUp { color:red; } th.headerSortDown { color:green; } th { background-color: #D3E1EC;}" )
         GM_addStyle( ".ui-tooltip-player {min-width:380px} .ui-tooltip-player a:visited{color:white} .ui-tooltip-player a:link{color:white} .ui-tooltip-player table {margin-top:0px;width:200px} .ui-tooltip-player td {width:110px}" );
         GM_addStyle( ".ui-tooltip-bonus {min-width:150px}.ui-tooltip-bonus a:visited{color:white} .ui-tooltip-bonus a:link{color:white} .ui-tooltip-bonus table {margin-top:0px;width:150px} .ui-tooltip-bonus td {width:150px}" );
+        GM_addStyle( ".beScript-menu {width:300px}.beScript-menu a:visited{color:white} .beScript-menu a:link{color:white}" );
 
         var tmpl1 = "<table style='color:white'>" +
         "<tr><td style='width:80px'>Талант</td><td>${talent} + ${expLevel / 10} = ${talent + expLevel / 10}</td></tr>" +
@@ -710,7 +834,9 @@ beScript.forecasts = {
         tableBody.replaceWith(sortedTableBody);
     },
     process : function () {
-        beScript.forecasts.colorizeC11Diff();
+        if ( beScript.settings.kp_helper ) {
+            beScript.forecasts.colorizeC11Diff();
+        }
     }
 };
 
@@ -801,7 +927,9 @@ beScript.organizer = {
     },
     process : function() {
         if (beScript.Util.checkLocation( "act=teamstatistics" )) {
-            beScript.organizer.addLastMatchesResults();
+            if ( beScript.settings.last_matches_in_organizer ) {
+                beScript.organizer.addLastMatchesResults();
+            }
         }
     }
 };
@@ -977,42 +1105,53 @@ beScript.roster = {
     },
     process : function() {
         var playersTable = $($(".maintable")[2]);
-        var _headers = { 
-            3: { sorter:'beScript.sorter.positions' },
-        };
         
-        if ( beScript.Util.checkLocation( "act=exp" ) ) {
-            $.extend( true, _headers, {    
-                10: { sorter:'digit' } 
-            });
-        } else if ( beScript.Util.checkLocation( "act=parameters" ) ) {
-            $.extend( true, _headers, {
-                10: { sorter:'digit' },
-                11: { sorter:'digit' },
-                12: { sorter:'digit' },
-            });
-        } else if ( beScript.Util.checkLocation( "act=stats" ) ) {
-            $.extend( true, _headers, {
-                9: { sorter:'digit' },
-                10: { sorter:'digit' },
-                11: { sorter:'digit' },
-            });
-        } else {
-            $.extend( true, _headers, {
-                12: { sorter:'digit' }
-            });
-        }
+        if ( beScript.settings.sorts_roster ) {
+            var _headers = { 
+                3: { sorter:'beScript.sorter.positions' },
+            };
+            
+            if ( beScript.Util.checkLocation( "act=exp" ) ) {
+                $.extend( true, _headers, {    
+                    10: { sorter:'digit' } 
+                });
+            } else if ( beScript.Util.checkLocation( "act=parameters" ) ) {
+                $.extend( true, _headers, {
+                    10: { sorter:'digit' },
+                    11: { sorter:'digit' },
+                    12: { sorter:'digit' },
+                });
+            } else if ( beScript.Util.checkLocation( "act=stats" ) ) {
+                $.extend( true, _headers, {
+                    9: { sorter:'digit' },
+                    10: { sorter:'digit' },
+                    11: { sorter:'digit' },
+                });
+            } else {
+                $.extend( true, _headers, {
+                    12: { sorter:'digit' }
+                });
+            }
 
-        beScript.Util.makeTableSortable( "roster", playersTable, _headers, [3, 0], 1 );
-        beScript.roster.makeTeamInfoLinks();
-        beScript.roster.addPlayersTips(playersTable);
-        beScript.roster.makeBonusPointsClickable(playersTable);
+            beScript.Util.makeTableSortable( "roster", playersTable, _headers, [3, 0], 1 );
+        }
+        
+        if ( beScript.settings.links_in_roster ) {
+            beScript.roster.makeTeamInfoLinks();
+        }
+        
+        if ( beScript.settings.helpers_profile ) {
+            beScript.roster.addPlayersTips(playersTable);
+        }
+        if ( beScript.settings.helpers_bonuses ) {
+            beScript.roster.makeBonusPointsClickable(playersTable);
+        }
     }
 };
 
 beScript.tournaments = {
     process : function() {
-        if ( beScript.Util.checkLocation( "act=standings" ) ) {
+        if ( beScript.settings.sorts_tournament_table && beScript.Util.checkLocation( "act=standings" ) ) {
             var table = $(".maintable");
             var _headers = { 
                 1: { sorter:false },
@@ -1042,7 +1181,8 @@ beScript.ratings = {
 
 beScript.school = {
     process : function() {
-        if ( beScript.Util.checkLocation( "roster" ) && !beScript.Util.checkLocation( "act=getplayer" ) ) {
+        if ( beScript.settings.sorts_school 
+            && beScript.Util.checkLocation( "roster" ) && !beScript.Util.checkLocation( "act=getplayer" ) ) {
             var playersTable = $($(".maintable")[2]);
             var _headers = { 
                 3: { sorter:'beScript.sorter.positions' },
@@ -1169,6 +1309,7 @@ beScript.Update = {
                 beScript.log("v:" + thisver + " u:" + checkver);
 
                 if (checkver - thisver > 0) {
+                    $("#ui-tooltip-beScript_menu_tooltip").qtip('destroy');
                     beScript.menuElem.css( {'color':'red','text-decoration':'underline'} );
                     beScript.menuElem.attr( "title", "Кликните, чтобы поставить версию " + vnum );
                     
@@ -1230,6 +1371,8 @@ jQuery.ajax=(function(_ajax){var protocol=location.protocol,hostname=location.ho
 // jQuery plugin - table sorter
 (function($){$.extend({tablesorter:new function(){var parsers=[],widgets=[];this.defaults={cssHeader:"header",cssAsc:"headerSortUp",cssDesc:"headerSortDown",sortInitialOrder:"asc",sortMultiSortKey:"shiftKey",sortForce:null,sortAppend:null,textExtraction:"simple",parsers:{},widgets:[],widgetZebra:{css:["even","odd"]},headers:{},widthFixed:false,cancelSelection:true,sortList:[],headerList:[],dateFormat:"us",decimal:'.',debug:false};function benchmark(s,d){log(s+","+(new Date().getTime()-d.getTime())+"ms");}this.benchmark=benchmark;function log(s){if(typeof console!="undefined"&&typeof console.debug!="undefined"){console.log(s);}else{alert(s);}}function buildParserCache(table,$headers){if(table.config.debug){var parsersDebug="";}var rows=table.tBodies[0].rows;if(table.tBodies[0].rows[0]){var list=[],cells=rows[0].cells,l=cells.length;for(var i=0;i<l;i++){var p=false;if($.metadata&&($($headers[i]).metadata()&&$($headers[i]).metadata().sorter)){p=getParserById($($headers[i]).metadata().sorter);}else if((table.config.headers[i]&&table.config.headers[i].sorter)){p=getParserById(table.config.headers[i].sorter);}if(!p){p=detectParserForColumn(table,cells[i]);}if(table.config.debug){parsersDebug+="column:"+i+" parser:"+p.id+"\n";}list.push(p);}}if(table.config.debug){log(parsersDebug);}return list;};function detectParserForColumn(table,node){var l=parsers.length;for(var i=1;i<l;i++){if(parsers[i].is($.trim(getElementText(table.config,node)),table,node)){return parsers[i];}}return parsers[0];}function getParserById(name){var l=parsers.length;for(var i=0;i<l;i++){if(parsers[i].id.toLowerCase()==name.toLowerCase()){return parsers[i];}}return false;}function buildCache(table){if(table.config.debug){var cacheTime=new Date();}var totalRows=(table.tBodies[0]&&table.tBodies[0].rows.length)||0,totalCells=(table.tBodies[0].rows[0]&&table.tBodies[0].rows[0].cells.length)||0,parsers=table.config.parsers,cache={row:[],normalized:[]};for(var i=0;i<totalRows;++i){var c=table.tBodies[0].rows[i],cols=[];cache.row.push($(c));for(var j=0;j<totalCells;++j){cols.push(parsers[j].format(getElementText(table.config,c.cells[j]),table,c.cells[j]));}cols.push(i);cache.normalized.push(cols);cols=null;};if(table.config.debug){benchmark("Building cache for "+totalRows+" rows:",cacheTime);}return cache;};function getElementText(config,node){if(!node)return"";var t="";if(config.textExtraction=="simple"){if(node.childNodes[0]&&node.childNodes[0].hasChildNodes()){t=node.childNodes[0].innerHTML;}else{t=node.innerHTML;}}else{if(typeof(config.textExtraction)=="function"){t=config.textExtraction(node);}else{t=$(node).text();}}return t;}function appendToTable(table,cache){if(table.config.debug){var appendTime=new Date()}var c=cache,r=c.row,n=c.normalized,totalRows=n.length,checkCell=(n[0].length-1),tableBody=$(table.tBodies[0]),rows=[];for(var i=0;i<totalRows;i++){rows.push(r[n[i][checkCell]]);if(!table.config.appender){var o=r[n[i][checkCell]];var l=o.length;for(var j=0;j<l;j++){tableBody[0].appendChild(o[j]);}}}if(table.config.appender){table.config.appender(table,rows);}rows=null;if(table.config.debug){benchmark("Rebuilt table:",appendTime);}applyWidget(table);setTimeout(function(){$(table).trigger("sortEnd");},0);};function buildHeaders(table){if(table.config.debug){var time=new Date();}var meta=($.metadata)?true:false,tableHeadersRows=[];for(var i=0;i<table.tHead.rows.length;i++){tableHeadersRows[i]=0;};$tableHeaders=$("thead th",table);$tableHeaders.each(function(index){this.count=0;this.column=index;this.order=formatSortingOrder(table.config.sortInitialOrder);if(checkHeaderMetadata(this)||checkHeaderOptions(table,index))this.sortDisabled=true;if(!this.sortDisabled){$(this).addClass(table.config.cssHeader);}table.config.headerList[index]=this;});if(table.config.debug){benchmark("Built headers:",time);log($tableHeaders);}return $tableHeaders;};function checkCellColSpan(table,rows,row){var arr=[],r=table.tHead.rows,c=r[row].cells;for(var i=0;i<c.length;i++){var cell=c[i];if(cell.colSpan>1){arr=arr.concat(checkCellColSpan(table,headerArr,row++));}else{if(table.tHead.length==1||(cell.rowSpan>1||!r[row+1])){arr.push(cell);}}}return arr;};function checkHeaderMetadata(cell){if(($.metadata)&&($(cell).metadata().sorter===false)){return true;};return false;}function checkHeaderOptions(table,i){if((table.config.headers[i])&&(table.config.headers[i].sorter===false)){return true;};return false;}function applyWidget(table){var c=table.config.widgets;var l=c.length;for(var i=0;i<l;i++){getWidgetById(c[i]).format(table);}}function getWidgetById(name){var l=widgets.length;for(var i=0;i<l;i++){if(widgets[i].id.toLowerCase()==name.toLowerCase()){return widgets[i];}}};function formatSortingOrder(v){if(typeof(v)!="Number"){i=(v.toLowerCase()=="desc")?1:0;}else{i=(v==(0||1))?v:0;}return i;}function isValueInArray(v,a){var l=a.length;for(var i=0;i<l;i++){if(a[i][0]==v){return true;}}return false;}function setHeadersCss(table,$headers,list,css){$headers.removeClass(css[0]).removeClass(css[1]);var h=[];$headers.each(function(offset){if(!this.sortDisabled){h[this.column]=$(this);}});var l=list.length;for(var i=0;i<l;i++){h[list[i][0]].addClass(css[list[i][1]]);}}function fixColumnWidth(table,$headers){var c=table.config;if(c.widthFixed){var colgroup=$('<colgroup>');$("tr:first td",table.tBodies[0]).each(function(){colgroup.append($('<col>').css('width',$(this).width()));});$(table).prepend(colgroup);};}function updateHeaderSortCount(table,sortList){var c=table.config,l=sortList.length;for(var i=0;i<l;i++){var s=sortList[i],o=c.headerList[s[0]];o.count=s[1];o.count++;}}function multisort(table,sortList,cache){if(table.config.debug){var sortTime=new Date();}var dynamicExp="var sortWrapper = function(a,b) {",l=sortList.length;for(var i=0;i<l;i++){var c=sortList[i][0];var order=sortList[i][1];var s=(getCachedSortType(table.config.parsers,c)=="text")?((order==0)?"sortText":"sortTextDesc"):((order==0)?"sortNumeric":"sortNumericDesc");var e="e"+i;dynamicExp+="var "+e+" = "+s+"(a["+c+"],b["+c+"]); ";dynamicExp+="if("+e+") { return "+e+"; } ";dynamicExp+="else { ";}var orgOrderCol=cache.normalized[0].length-1;dynamicExp+="return a["+orgOrderCol+"]-b["+orgOrderCol+"];";for(var i=0;i<l;i++){dynamicExp+="}; ";}dynamicExp+="return 0; ";dynamicExp+="}; ";eval(dynamicExp);cache.normalized.sort(sortWrapper);if(table.config.debug){benchmark("Sorting on "+sortList.toString()+" and dir "+order+" time:",sortTime);}return cache;};function sortText(a,b){return((a<b)?-1:((a>b)?1:0));};function sortTextDesc(a,b){return((b<a)?-1:((b>a)?1:0));};function sortNumeric(a,b){return a-b;};function sortNumericDesc(a,b){return b-a;};function getCachedSortType(parsers,i){return parsers[i].type;};this.construct=function(settings){return this.each(function(){if(!this.tHead||!this.tBodies)return;var $this,$document,$headers,cache,config,shiftDown=0,sortOrder;this.config={};config=$.extend(this.config,$.tablesorter.defaults,settings);$this=$(this);$headers=buildHeaders(this);this.config.parsers=buildParserCache(this,$headers);cache=buildCache(this);var sortCSS=[config.cssDesc,config.cssAsc];fixColumnWidth(this);$headers.click(function(e){$this.trigger("sortStart");var totalRows=($this[0].tBodies[0]&&$this[0].tBodies[0].rows.length)||0;if(!this.sortDisabled&&totalRows>0){var $cell=$(this);var i=this.column;this.order=this.count++%2;if(!e[config.sortMultiSortKey]){config.sortList=[];if(config.sortForce!=null){var a=config.sortForce;for(var j=0;j<a.length;j++){if(a[j][0]!=i){config.sortList.push(a[j]);}}}config.sortList.push([i,this.order]);}else{if(isValueInArray(i,config.sortList)){for(var j=0;j<config.sortList.length;j++){var s=config.sortList[j],o=config.headerList[s[0]];if(s[0]==i){o.count=s[1];o.count++;s[1]=o.count%2;}}}else{config.sortList.push([i,this.order]);}};setTimeout(function(){setHeadersCss($this[0],$headers,config.sortList,sortCSS);appendToTable($this[0],multisort($this[0],config.sortList,cache));},1);return false;}}).mousedown(function(){if(config.cancelSelection){this.onselectstart=function(){return false};return false;}});$this.bind("update",function(){this.config.parsers=buildParserCache(this,$headers);cache=buildCache(this);}).bind("sorton",function(e,list){$(this).trigger("sortStart");config.sortList=list;var sortList=config.sortList;updateHeaderSortCount(this,sortList);setHeadersCss(this,$headers,sortList,sortCSS);appendToTable(this,multisort(this,sortList,cache));}).bind("appendCache",function(){appendToTable(this,cache);}).bind("applyWidgetId",function(e,id){getWidgetById(id).format(this);}).bind("applyWidgets",function(){applyWidget(this);});if($.metadata&&($(this).metadata()&&$(this).metadata().sortlist)){config.sortList=$(this).metadata().sortlist;}if(config.sortList.length>0){$this.trigger("sorton",[config.sortList]);}applyWidget(this);});};this.addParser=function(parser){var l=parsers.length,a=true;for(var i=0;i<l;i++){if(parsers[i].id.toLowerCase()==parser.id.toLowerCase()){a=false;}}if(a){parsers.push(parser);};};this.addWidget=function(widget){widgets.push(widget);};this.formatFloat=function(s){var i=parseFloat(s);return(isNaN(i))?0:i;};this.formatInt=function(s){var i=parseInt(s);return(isNaN(i))?0:i;};this.isDigit=function(s,config){var DECIMAL='\\'+config.decimal;var exp='/(^[+]?0('+DECIMAL+'0+)?$)|(^([-+]?[1-9][0-9]*)$)|(^([-+]?((0?|[1-9][0-9]*)'+DECIMAL+'(0*[1-9][0-9]*)))$)|(^[-+]?[1-9]+[0-9]*'+DECIMAL+'0+$)/';return RegExp(exp).test($.trim(s));};this.clearTableBody=function(table){if($.browser.msie){function empty(){while(this.firstChild)this.removeChild(this.firstChild);}empty.apply(table.tBodies[0]);}else{table.tBodies[0].innerHTML="";}};}});$.fn.extend({tablesorter:$.tablesorter.construct});var ts=$.tablesorter;ts.addParser({id:"text",is:function(s){return true;},format:function(s){return $.trim(s.toLowerCase());},type:"text"});ts.addParser({id:"digit",is:function(s,table){var c=table.config;return $.tablesorter.isDigit(s,c);},format:function(s){return $.tablesorter.formatFloat(s);},type:"numeric"});ts.addParser({id:"currency",is:function(s){return/^[A?$a‚¬?.]/.test(s);},format:function(s){return $.tablesorter.formatFloat(s.replace(new RegExp(/[^0-9.]/g),""));},type:"numeric"});ts.addParser({id:"ipAddress",is:function(s){return/^\d{2,3}[\.]\d{2,3}[\.]\d{2,3}[\.]\d{2,3}$/.test(s);},format:function(s){var a=s.split("."),r="",l=a.length;for(var i=0;i<l;i++){var item=a[i];if(item.length==2){r+="0"+item;}else{r+=item;}}return $.tablesorter.formatFloat(r);},type:"numeric"});ts.addParser({id:"url",is:function(s){return/^(https?|ftp|file):\/\/$/.test(s);},format:function(s){return jQuery.trim(s.replace(new RegExp(/(https?|ftp|file):\/\//),''));},type:"text"});ts.addParser({id:"isoDate",is:function(s){return/^\d{4}[\/-]\d{1,2}[\/-]\d{1,2}$/.test(s);},format:function(s){return $.tablesorter.formatFloat((s!="")?new Date(s.replace(new RegExp(/-/g),"/")).getTime():"0");},type:"numeric"});ts.addParser({id:"percent",is:function(s){return/\%$/.test($.trim(s));},format:function(s){return $.tablesorter.formatFloat(s.replace(new RegExp(/%/g),""));},type:"numeric"});ts.addParser({id:"usLongDate",is:function(s){return s.match(new RegExp(/^[A-Za-z]{3,10}\.? [0-9]{1,2}, ([0-9]{4}|'?[0-9]{2}) (([0-2]?[0-9]:[0-5][0-9])|([0-1]?[0-9]:[0-5][0-9]\s(AM|PM)))$/));},format:function(s){return $.tablesorter.formatFloat(new Date(s).getTime());},type:"numeric"});ts.addParser({id:"shortDate",is:function(s){return/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/.test(s);},format:function(s,table){var c=table.config;s=s.replace(/\-/g,"/");if(c.dateFormat=="us"){s=s.replace(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/,"$3/$1/$2");}else if(c.dateFormat=="uk"){s=s.replace(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/,"$3/$2/$1");}else if(c.dateFormat=="dd/mm/yy"||c.dateFormat=="dd-mm-yy"){s=s.replace(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2})/,"$1/$2/$3");}return $.tablesorter.formatFloat(new Date(s).getTime());},type:"numeric"});ts.addParser({id:"time",is:function(s){return/^(([0-2]?[0-9]:[0-5][0-9])|([0-1]?[0-9]:[0-5][0-9]\s(am|pm)))$/.test(s);},format:function(s){return $.tablesorter.formatFloat(new Date("2000/01/01 "+s).getTime());},type:"numeric"});ts.addParser({id:"metadata",is:function(s){return false;},format:function(s,table,cell){var c=table.config,p=(!c.parserMetadataName)?'sortValue':c.parserMetadataName;return $(cell).metadata()[p];},type:"numeric"});ts.addWidget({id:"zebra",format:function(table){if(table.config.debug){var time=new Date();}$("tr:visible",table.tBodies[0]).filter(':even').removeClass(table.config.widgetZebra.css[1]).addClass(table.config.widgetZebra.css[0]).end().filter(':odd').removeClass(table.config.widgetZebra.css[0]).addClass(table.config.widgetZebra.css[1]);if(table.config.debug){$.tablesorter.benchmark("Applying Zebra widget",time);}}});})(jQuery);
 
+// jQuery plugin - jStepper (http://jstepper.emkay.dk/)
+function AddOrSubtractTwoFloats(fltValue1,fltValue2,bAddSubtract){var strNumber1=fltValue1.toString();var strNumber2=fltValue2.toString();var strResult="";if(strNumber1.indexOf(".")>-1||strNumber2.indexOf(".")>-1){if(strNumber1.indexOf(".")==-1){strNumber1=strNumber1+".0";}if(strNumber2.indexOf(".")==-1){strNumber2=strNumber2+".0";}var strDecimals1=strNumber1.substr(strNumber1.indexOf(".")+1);var strDecimals2=strNumber2.substr(strNumber2.indexOf(".")+1);var strInteger1=strNumber1.substr(0,strNumber1.indexOf("."));var strInteger2=strNumber2.substr(0,strNumber2.indexOf("."));var bNotSameLength=true;while(bNotSameLength){if(strDecimals1.length!=strDecimals2.length){if(strDecimals1.length<strDecimals2.length){strDecimals1+="0";}else{strDecimals2+="0";}}else{bNotSameLength=false;}}var intOriginalDecimalLength=strDecimals1.length;for(var intCharIndex=0;intCharIndex<=strDecimals1.length-1;intCharIndex++){strInteger1=strInteger1+strDecimals1.substr(intCharIndex,1);strInteger2=strInteger2+strDecimals2.substr(intCharIndex,1);}var intInteger1=Number(strInteger1);var intInteger2=Number(strInteger2);var intResult;if(bAddSubtract){intResult=intInteger1+intInteger2;}else{intResult=intInteger1-intInteger2;}strResult=intResult.toString();for(var intZerosAdded=0;intZerosAdded<((intOriginalDecimalLength-strResult.length)+1);intZerosAdded++){strResult="0"+strResult;}if(strResult.length>=intOriginalDecimalLength){strResult=strResult.substring(0,strResult.length-intOriginalDecimalLength)+"."+strResult.substring(strResult.length-intOriginalDecimalLength);}}else{if(bAddSubtract){strResult=Number(fltValue1)+Number(fltValue2);}else{strResult=Number(fltValue1)-Number(fltValue2);}}return Number(strResult);}(function(jQuery){jQuery.fn.jStepper=function(options){var opts=jQuery.extend({},jQuery.fn.jStepper.defaults,options);return this.each(function(){var $this=jQuery(this);var o=jQuery.meta?jQuery.extend({},opts,$this.data()):opts;if(o.disableAutocomplete){$this.attr("autocomplete","off");}if(jQuery.isFunction($this.mousewheel)){$this.mousewheel(function(objEvent,intDelta){if(intDelta>0){MakeStep(o,1,null,this);return false;}else if(intDelta<0){MakeStep(o,0,null,this);return false;}});}$this.keydown(function(e){var key=e.keyCode;if(key==38){MakeStep(o,1,e,this);}if(key==40){MakeStep(o,0,e,this);}});$this.keyup(function(e){CheckValue(o,this);});});};function CheckValue(o,objElm){var $objElm=jQuery(objElm);var strValue=$objElm.val();if(o.disableNonNumeric){strValue=strValue.replace(/[^\d\.,\-]/gi,"");}if(o.maxValue!==null){if(strValue>=o.maxValue){strValue=o.maxValue;}}if(o.minValue!==null){if(strValue<=o.minValue&&strValue!=""){strValue=o.minValue;}}$objElm.val(strValue);}function MakeStep(o,bDirection,keydown,objElm){var $objElm=jQuery(objElm);var stepToUse;if(keydown){if(keydown.ctrlKey){stepToUse=o.ctrlStep;}else if(keydown.shiftKey){stepToUse=o.shiftStep;}else{stepToUse=o.normalStep;}}else{stepToUse=o.normalStep;}var numValue=$objElm.val();var intSelectionStart=numValue.length-objElm.selectionStart;var intSelectionEnd=numValue.length-objElm.selectionEnd;numValue=numValue.replace(/,/g,".");numValue=numValue.replace(o.decimalSeparator,".");numValue=numValue+'';if(numValue.indexOf(".")!=-1){numValue=numValue.match(new RegExp("-{0,1}[0-9]+[\\.][0-9]*"));}numValue=numValue+'';if(numValue.indexOf("-")!=-1){numValue=numValue.match(new RegExp("-{0,1}[0-9]+[\\.]*[0-9]*"));}numValue=numValue+'';numValue=numValue.match(new RegExp("-{0,1}[0-9]+[\\.]*[0-9]*"));if(numValue===""||numValue=="-"||numValue===null){numValue=o.defaultValue;}if(bDirection==1){numValue=AddOrSubtractTwoFloats(numValue,stepToUse,true);}else{numValue=AddOrSubtractTwoFloats(numValue,stepToUse,false);}var bLimitReached=false;if(o.maxValue!==null){if(numValue>=o.maxValue){numValue=o.maxValue;bLimitReached=true;}}if(o.minValue!==null){if(numValue<=o.minValue){numValue=o.minValue;bLimitReached=true;}}numValue=numValue+'';if(o.minLength!==null){var intLengthNow=numValue.length;if(numValue.indexOf(".")!=-1){intLengthNow=numValue.indexOf(".");}var bIsNegative=false;if(numValue.indexOf("-")!=-1){bIsNegative=true;numValue=numValue.replace(/-/,"");}if(intLengthNow<o.minLength){for(var i=1;i<=(o.minLength-intLengthNow);i++){numValue='0'+numValue;}}if(bIsNegative){numValue='-'+numValue;}}numValue=numValue+'';var intDecimalsNow;if(o.minDecimals>0){var intDecimalsMissing;if(numValue.indexOf(".")!=-1){intDecimalsNow=numValue.length-(numValue.indexOf(".")+1);if(intDecimalsNow<o.minDecimals){intDecimalsMissing=o.minDecimals-intDecimalsNow;}}else{intDecimalsMissing=o.minDecimals;numValue=numValue+'.';}for(var intDecimalIndex=1;intDecimalIndex<=intDecimalsMissing;intDecimalIndex++){numValue=numValue+'0';}}if(o.maxDecimals>0){intDecimalsNow=0;if(numValue.indexOf(".")!=-1){intDecimalsNow=numValue.length-(numValue.indexOf(".")+1);if(o.maxDecimals<intDecimalsNow){numValue=numValue.substring(0,numValue.indexOf("."))+"."+numValue.substring(numValue.indexOf(".")+1,numValue.indexOf(".")+1+o.maxDecimals);}}}if(!o.allowDecimals){numValue=numValue+'';numValue=numValue.replace(new RegExp("[\\.].+"),"");}numValue=numValue.replace(/\./,o.decimalSeparator);$objElm.val(numValue);objElm.selectionStart=numValue.length-intSelectionStart;objElm.selectionEnd=numValue.length-intSelectionEnd;CheckValue(o,this);if(o.onStep){o.onStep($objElm,bDirection,bLimitReached);}return false;}jQuery.fn.jStepper.defaults={maxValue:null,minValue:null,normalStep:1,shiftStep:5,ctrlStep:10,minLength:null,disableAutocomplete:true,defaultValue:1,decimalSeparator:",",allowDecimals:true,minDecimals:0,maxDecimals:null,disableNonNumeric:true,onStep:null};})(jQuery);
 // ------------------------
 // -      Start point     -
 // ------------------------
