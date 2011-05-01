@@ -662,7 +662,12 @@ var beScript = {
         if ( lastNewsShownVersion != beScript.VERSION ) {
             var newsTooltopContainer = $("body").append( "<div id='beScript_NewsTooltip' />" );
             var userName = $( ">b", $( "#beScript_td" ).next()).text();
-            
+/*            var tmp = function() {
+                        beScript.log( "!" );
+                        beScript.Util.serialize( "news_shown_for_version", beScript.VERSION );
+                        beScript.log( "2!" );
+            };
+*/
             newsTooltopContainer.qtip({
                 id:'beScript_news_tooltip',
                 position: {
@@ -689,7 +694,9 @@ var beScript = {
                 },
                 events: {
                     show : function( event, api ) {
-                        beScript.Util.serialize( "news_shown_for_version", beScript.VERSION );
+                        setTimeout(function() {
+                            beScript.Util.serialize( "news_shown_for_version", beScript.VERSION );
+                        }, 0); 
                     },
                     hide : function( event, api ) {
                         beScript.Update.init();
