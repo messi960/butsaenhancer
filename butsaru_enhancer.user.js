@@ -133,7 +133,7 @@ Player = function() {
 var beScript = {
     debug : true,
     
-	VERSION : "0.0.16",
+	VERSION : "0.1.1",
     NAMESPACE : "butsa_enhancer",
     UPDATES_CHECK_FREQ : 15, //minutes
     TEAM_UPDATES_CHECK_FREQ : 60 * 24, // minutes; recommended value is 60 * 24 = 1440 = 1 day.
@@ -656,10 +656,57 @@ var beScript = {
             });
         }
     },
+    showNews : function() {
+        var lastNewsShownVersion = beScript.Util.deserialize( "news_shown_for_version", "" );
+
+        if ( lastNewsShownVersion != beScript.VERSION ) {
+            var newsTooltopContainer = $("body").append( "<div id='beScript_NewsTooltip' />" );
+            var userName = $( ">b", $( "#beScript_td" ).next()).text();
+            
+            newsTooltopContainer.qtip({
+                id:'beScript_news_tooltip',
+                position: {
+                    my: 'top center',
+                    at: 'top center',
+                    target: $(window)
+                },
+                hide: false,
+                show: { 
+                    modal: {
+                        onload : true,
+                    },
+                    ready: true
+                },
+                content: {
+                    title: {
+                        text: "beScript (v" + beScript.VERSION + ") :: Новости",
+                        button: "Закрыть",
+                    },
+                    text: "<span>Приветствую, " + userName + "!</span><br/><br/><span>Перед Вами первая мажорная версия этого скрипта и по этому поводу мне бы хотелось сделать небольшое объявление, рассказать о том, что уже сделано и немножко о дальнейших планах. Сразу успокою - окошко с этой новостью будет показано только один раз - после нажатия на крестик в правом верхнем углу оно пропадет и больше не вылезет :).<br /><br/>Начну с объявления, ибо есть вероятность, что не все дочитают эту простыню до конца :). Скрипт написан на javascript'е с небольшим использованием HTML. Мне <span style='color:red'>очень</span> нужна помощь в дизайне и HTML-верстке. Так что если у Вас есть художественный вкус и опыт в кроссбраузерной верстке, желание поработать на благо общественности, а также немного времени, не сочтите за труд <a href='http://butsa.ru/xml/office/mail.php?act=write&user=16031'>написать мне</a>. Спасибо.<br /><br />Теперь о том, что уже умеет этот скрипт:<br/><ul><li>У ВИП-пользователей в органайзере добавляется счет последнего матча каждой команды.</li><li>Добавлена сортировка команд по разнице с11 на странице конкурса прогнозов.</li><li>Улучшена сортировка таблиц в ростере команд, ДЮСШ и еще на нескольких страницах сайта - теперь все можно сортировать без перезагрузки страниц.</li><li>Сортировка на каждой странице сохраняется.</li><li>Реализован механизм оповещения о наличии обновления скрипта.</li><li>Добавлено всплывающее окошко, появляющееся при наведении мышки на строчку с именем игрока.</li><li>Добавлено всплывающее окошко, которое позволяет добавить бонус игроку не уходя со страницы.</li><li>Сделаны кликабельными некоторые характеристики (деньги, стадион, ЗР итд) в на странице команды.</li><li>Добавлено меню настроек скрипта.</li><li>Добавлена функциональность \"предсказания\" прокачки игрока - все формулы взяты из <a href='http://forum.butsa.ru/index.php?showtopic=140527' target='_blank'>адд-она для Firefox'а</a> за авторством <a href='http://forum.butsa.ru/index.php?showuser=13908' target='_blank'>Snerh'а</a></li></ul>Ну и самое главное, что хотелось бы отметить - скрипт работает в большинстве популярных браузеров (за обидным исключением, наверное, самого популарного браузера - Internet Explorer'а) - Firefox, Opera, Chrome, Safari (только в Mac OS), а значит еще большему количеству человек играть стало удобнее.<br /><br />Подробнее обо всем, что написано выше, можно почитать (и посмотреть скриншоты) в соответствующей <a href='http://forum.butsa.ru/index.php?showtopic=233323' target='_blank'>ветке</a> на форуме.<br/><br/>Далее о планах. Не могу сказать, что они прямо-таки обширные - если честно, то свежих идей не хватает. Пока что планируется сделать следующее:<br/><ul><li>Добавить кнопку отправки к психологу без перезагрузки страницы на страницу ростера.</li><li>Добавить возможность написания сообщения пользователю при наведении мышкой на его ник. Будет полезно президентам, вице и тем, кто пишет много внутри бутсы.</li><li>Для президентов с вице-президентами же планируется добавить дату последнего захода менеджера в игру на страницу с ростером команды.</li><li>Добавить быструю кнопку \"купить 300.000 товара\" на все страницы.</li></ul>Собственно, это пока что все. Я был бы крайне признателен за любые идеи, которые, однако, должны соответствовать следующим ограничениям:<br/><ul><li>Не грузить сервера бутсы. Это значит, что на действие пользователя на активной странице не должно идти обращение к другой странице бутсы. На практике это выливается в то, что нельзя, допустим, сделать красивые всплывающие окошки для чужих команд - только для своих. В случае со своими командами данные обновляются раз в сутки и сохраняются на машине пользователя. Информацию обо всех командах сохранить на каждом компьютере невозможно, а значит ее придется каждый раз скачивать с сервера. Это запрещено.</li><li>Не должна дублироваться ВИП-функциональность. Тут все просто - о рангах ВИП можно почитать в <a href='http://butsa.ru/xml/office/vip.php'>соответствующем разделе</a>.</li></ul><br />Вроде, все. Спасибо, что дочитали до конца.</span><br/><div style='position:relative;float:right;margin:0px 10px 5px 0px'><a href='http://butsa.ru/users/16032' target='_blank'>kovpas</a></div>"
+                },
+                style: {
+                    classes:'ui-tooltip-dark ui-tooltip-rounded beScript-news',
+                },
+                events: {
+                    show : function( event, api ) {
+                        beScript.Util.serialize( "news_shown_for_version", beScript.VERSION );
+                    },
+                    hide : function( event, api ) {
+                        beScript.Update.init();
+                    }
+                }
+            });
+            
+            return true;
+        }
+        
+        return false;
+    },
     init : function() {
         beScript.log( "jQuery version: " + $().jquery );
         
         beScript.settings = beScript.Util.deserialize( "settings", beScript.default_settings );
+        
         if ( !beScript.settings.playerProfile ) {
             beScript.settings.playerProfile = beScript.default_settings.playerProfile;
         }
@@ -670,7 +717,6 @@ var beScript = {
         
         beScript.updateTrainNumber();
         
-        beScript.Update.init();
         beScript.Util.init();
         
         if (beScript.Util.checkLocation( "kp.php" )) {
@@ -696,6 +742,10 @@ var beScript = {
         }
         if (beScript.Util.checkLocation( /players\/(info\.php\?id=)?\d+/ )) {
             beScript.playerProfile.process();
+        }
+        
+        if ( !beScript.showNews() ) {
+            beScript.Update.init();
         }
 	},
 };
@@ -731,16 +781,17 @@ beScript.Util = {
         GM_addStyle( ".ui-tooltip-player {min-width:380px} .ui-tooltip-player a:visited{color:white} .ui-tooltip-player a:link{color:white} .ui-tooltip-player table {margin-top:0px;width:200px} .ui-tooltip-player td {width:110px}" );
         GM_addStyle( ".ui-tooltip-bonus {min-width:150px}.ui-tooltip-bonus a:visited{color:white} .ui-tooltip-bonus a:link{color:white} .ui-tooltip-bonus table {margin-top:0px;width:150px} .ui-tooltip-bonus td {width:150px}" );
         GM_addStyle( ".beScript-menu {width:300px}.beScript-menu a:visited{color:white} .beScript-menu a:link{color:white}" );
+        GM_addStyle( ".beScript-news {min-width:700px}.beScript-news a:visited{color:white} .beScript-news a:link{color:white}" );
 
         var tmpl1 = "<table style='color:white'>" +
         "<tr><td style='width:80px'>Талант</td><td>${talent} + ${expLevel / 10} = ${talent + expLevel / 10}</td></tr>" +
-        "<tr><td style='width:80px'>Очки опыта</td><td>${expPoints} / ${nextLevelExpPoints} = ${Math.round(expPoints / nextLevelExpPoints * 100)}%</td></tr>" +
+        "<tr title='${nextLevelExpPoints - expPoints}'><td style='width:80px'>Очки опыта</td><td>${expPoints} / ${nextLevelExpPoints} = ${Math.round(expPoints / nextLevelExpPoints * 100)}%</td></tr>" +
         "<tr><td style='width:80px'>Возраст</td><td>${age}</td></tr>" +
         "<tr><td style='width:80px'>Позиция</td><td>${primaryPosition}{{if secondaryPosition}}/${secondaryPosition}{{/if}}</td></tr>" +
         "<tr><td style='width:80px'>Зарплата</td><td>${salary_txt}</td></tr>" +
         "<tr><td style='width:80px'>Стоимость</td><td>${cost_txt}</td></tr>" +
         "{{if $(bonuses).size() > 0 }}<tr><td style='width:80px'>Бонусы</td><td>${bonuses.str}</td></tr>{{/if}}" +
-        "<tr><td style='width:80px'>Очки бонусов</td><td>${bonusPoints} / ${nextBonusPoints} = ${Math.round(bonusPoints / nextBonusPoints * 100)}%</td></tr>" +
+        "<tr title='${nextBonusPoints - bonusPoints}'><td style='width:80px'>Очки бонусов</td><td>${bonusPoints} / ${nextBonusPoints} = ${Math.round(bonusPoints / nextBonusPoints * 100)}%</td></tr>" +
         "<tr><td style='width:80px'>Мораль</td><td>${morale}</td></tr></table>";
         
         var tmpl2 = "{{if primaryPosition != 'Gk'}}<table style='color:white'>" +
@@ -1368,14 +1419,9 @@ beScript.playerProfile = {
                 $(this).css('color','');
             });
         var menuSpan = $( "<span style='position:relative;top:2px;text-decoration:underline'>Настроить</span>" );
-/*        var refreshImage = $( "<img style='position:relative;top:1px;' src='data:image/png;base64,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'/>" );*/
         menuDiv.append( menuSpan );
-//        menuDiv.append( refreshImage );
         header.prepend( menuDiv );
-/*        refreshImage.click(function() {
-            beScript.playerProfile.updatePlayerProgress();
-        });
-*/
+
         var content = $( "<div />" );
         content.css( "color", "white" );
         
@@ -1411,13 +1457,17 @@ beScript.playerProfile = {
         trainRegimeDiv.append( "<input type='radio' id='train_regime_radio_queue' name='train_regime_radio' value='2' /><label for='train_regime_radio_queue'>По очереди</label><br />" );
         trainRegimeDiv.append( "<input type='radio' id='train_regime_radio_prop' name='train_regime_radio' value='3' /><label for='train_regime_radio_prop'>Пропорционально</label>" );
         
-        $( "input[name='train_regime_radio']", trainRegimeDiv ).each( function() {
-            if ( $(this).attr("value") == beScript.settings.playerProfile["train_regime_radio"] ) {
-                $(this).attr("checked", "true");
-            } else {
-                $(this).removeAttr("checked");
-            }
-        });
+        var checkRadioByGroupId = function( id, inDiv ) {
+            $( "input[name='" + id + "']", inDiv ).each( function() {
+                if ( $(this).attr("value") == beScript.settings.playerProfile[id] ) {
+                    $(this).attr("checked", "true");
+                } else {
+                    $(this).removeAttr("checked");
+                }
+            });
+        }
+        
+        checkRadioByGroupId( "train_regime_radio", trainRegimeDiv );
         
         $( "input[name='train_regime_radio']", trainRegimeDiv ).change(function() {
             if ( $(this).attr("checked") ) {
@@ -1433,19 +1483,25 @@ beScript.playerProfile = {
         expGainDiv.append( "<input type='radio' id='exp_gain_radio_friend' name='exp_gain_radio' value='" + (54*36) + "' /><label for='exp_gain_radio_friend' title='54 * 36 = 1944'>Товарищеские</label><br />" );
         expGainDiv.append( "<input type='radio' id='exp_gain_radio_champ_friend' name='exp_gain_radio' value='" + (30*90+54*36) + "' /><label for='exp_gain_radio_champ_friend' title='30 * 90 + 54 * 36 = 4644'>Чемпионат + Товарищеские</label><br/>" );
         expGainDiv.append( "<input type='radio' id='exp_gain_radio_none' name='exp_gain_radio' value='0'><label for='exp_gain_radio_none' title='0'>Не играет</label>" );
-
-        $( "input[name='exp_gain_radio']", expGainDiv ).each( function() {
-            if ( $(this).attr("value") == beScript.settings.playerProfile["exp_gain_radio"] ) {
-                $(this).attr("checked", "true");
-            } else {
-                $(this).removeAttr("checked");
+        expGainDiv.append( createNumericInputWithIdAndLabel( "exp_gain_radio", "Задать вручную: ", function() {
+            var value = parseInt($(this).attr( "value" ));
+            if ( value < 0 ) {
+                $(this).attr( "value", 0 );
             }
-        });
+
+            beScript.updateSetting( "playerProfile." + $(this).attr( "id" ), $(this).attr( "value" ) );
+            checkRadioByGroupId( "exp_gain_radio", expGainDiv );
+        }, "position:relative;bottom:2px;margin-right:5px;", "position:relative;bottom:1px;border:1px solid black;width:50px;text-align:right" ) );
+
+
+        checkRadioByGroupId( "exp_gain_radio", expGainDiv );
         
         $( "input[name='exp_gain_radio']", expGainDiv ).change(function() {
             if ( $(this).attr("checked") ) {
                 beScript.updateSetting( "playerProfile." + $(this).attr( "name" ), $(this).attr( "value" ) );
             }
+            
+            $( "#exp_gain_radio" ).attr( "value", $(this).attr( "value" ) );
         });
 
         contentLeft.append( expGainDiv );
@@ -1488,7 +1544,7 @@ beScript.playerProfile = {
         
         var skillsDiv = $( "<div id='skills_div' style='padding:3px 3px 0px 7px;border:1px solid white' />" );
         skillsDiv.append( createNumericInputWithIdAndLabel( "skills_tckl", "Отбор: ", null, "position:relative;top:2px;margin-right:5px;", "float:right;position:relative;bottom:1px;border:1px solid black;width:50px;text-align:right" ) );
-        $( "input[id='skills_tckl']", skillsDiv ).numeric().floatnumber(".", 2).blur();
+        $( "input[id='skills_tckl']", skillsDiv ).floatnumber(".", 2).blur();
         skillsDiv.append( createNumericInputWithIdAndLabel( "skills_mrk", "Опека: ", null, "position:relative;top:2px;margin-right:5px;", "float:right;position:relative;bottom:1px;border:1px solid black;width:50px;text-align:right" ) );
         $( "input[id='skills_mrk']", skillsDiv ).floatnumber(".", 2).blur();
         skillsDiv.append( createNumericInputWithIdAndLabel( "skills_drbl", "Дриблинг: ", null, "position:relative;top:2px;margin-right:5px;", "float:right;position:relative;bottom:1px;border:1px solid black;width:50px;text-align:right" ) );
@@ -1790,8 +1846,24 @@ beScript.Update = {
                             $(this).css('cursor','auto');
                         });
 
-                    beScript.menuElem.attr( "title", "Кликните, чтобы поставить версию " + vnum );
-                    
+                    beScript.menuElem.qtip({
+                        id:'beScript_menu_version_helper_tooltip',
+                        position: {
+                            my : 'right center',  // Position my top left...
+                            at : 'left center', // at the bottom right of...
+                        },
+                        show: {
+                            ready: true
+                        },
+                        hide: {
+                            event: 'click'
+                        },
+                        content: {
+                            text: "Доступно обновление " + vnum.trim() + "!"
+                        },
+                        style: 'ui-tooltip-dark ui-tooltip-rounded',
+                    });
+                                        
                     if ( window.navigator.vendor && window.navigator.vendor.match(/Google/) ) {
                         beScript.menuElem.attr( "onClick", "javascript:window.location='http://butsaenhancer.googlecode.com/svn/trunk/Butsa%20Enhancer.crx'" );
                     } else {
@@ -1849,9 +1921,6 @@ jQuery.ajax=(function(_ajax){var protocol=location.protocol,hostname=location.ho
 
 // jQuery plugin - float number: http://plugins.jquery.com/project/floatnumber
 (function(a){a.fn.floatnumber=function(c,b){return this.each(function(){var d=a(this);var e=false;function f(){var g=new RegExp(",","g");s=d.val();s=s.replace(g,".");if(s==""){s="0"}if(!isNaN(s)){n=parseFloat(s);s=n.toFixed(b);re2=new RegExp("\\.","g");s=s.replace(re2,c);d.val(s)}}d.bind("blur",f)})}})(jQuery);
-
-// jQuery plugin - numeric: http://www.texotela.co.uk/code/jquery/numeric/
-(function(a){a.fn.numeric=function(b,c){b=(b===false)?"":b||".";c=typeof c=="function"?c:function(){};return this.data("numeric.decimal",b).data("numeric.callback",c).keypress(a.fn.numeric.keypress).blur(a.fn.numeric.blur)};a.fn.numeric.keypress=function(f){var b=a.data(this,"numeric.decimal");var c=f.charCode?f.charCode:f.keyCode?f.keyCode:0;if(c==13&&this.nodeName.toLowerCase()=="input"){return true}else{if(c==13){return false}}var d=false;if((f.ctrlKey&&c==97)||(f.ctrlKey&&c==65)){return true}if((f.ctrlKey&&c==120)||(f.ctrlKey&&c==88)){return true}if((f.ctrlKey&&c==99)||(f.ctrlKey&&c==67)){return true}if((f.ctrlKey&&c==122)||(f.ctrlKey&&c==90)){return true}if((f.ctrlKey&&c==118)||(f.ctrlKey&&c==86)||(f.shiftKey&&c==45)){return true}if(c<48||c>57){if(c==45&&this.value.length==0){return true}if(b&&c==b.charCodeAt(0)&&this.value.indexOf(b)!=-1){d=false}if(c!=8&&c!=9&&c!=13&&c!=35&&c!=36&&c!=37&&c!=39&&c!=46){d=false}else{if(typeof f.charCode!="undefined"){if(f.keyCode==f.which&&f.which!=0){d=true;if(f.which==46){d=false}}else{if(f.keyCode!=0&&f.charCode==0&&f.which==0){d=true}}}}if(b&&c==b.charCodeAt(0)){if(this.value.indexOf(b)==-1){d=true}else{d=false}}}else{d=true}return d};a.fn.numeric.blur=function(){var b=a.data(this,"numeric.decimal");var e=a.data(this,"numeric.callback");var d=a(this).val();if(d!=""){var c=new RegExp("^\\d+$|\\d*"+b+"\\d+");if(!c.exec(d)){e.apply(this)}}};a.fn.removeNumeric=function(){return this.data("numeric.decimal",null).data("numeric.callback",null).unbind("keypress",a.fn.numeric.keypress).unbind("blur",a.fn.numeric.blur)}})(jQuery);
 
 // ------------------------
 // -      Start point     -
