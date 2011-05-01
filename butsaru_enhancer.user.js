@@ -133,7 +133,7 @@ Player = function() {
 var beScript = {
     debug : true,
     
-	VERSION : "0.1.1",
+	VERSION : "0.1.2",
     NAMESPACE : "butsa_enhancer",
     UPDATES_CHECK_FREQ : 15, //minutes
     TEAM_UPDATES_CHECK_FREQ : 60 * 24, // minutes; recommended value is 60 * 24 = 1440 = 1 day.
@@ -659,15 +659,10 @@ var beScript = {
     showNews : function() {
         var lastNewsShownVersion = beScript.Util.deserialize( "news_shown_for_version", "" );
 
-        if ( lastNewsShownVersion != beScript.VERSION ) {
+//        if ( lastNewsShownVersion == beScript.VERSION ) {
+        if ( lastNewsShownVersion == "" ) {
             var newsTooltopContainer = $("body").append( "<div id='beScript_NewsTooltip' />" );
             var userName = $( ">b", $( "#beScript_td" ).next()).text();
-/*            var tmp = function() {
-                        beScript.log( "!" );
-                        beScript.Util.serialize( "news_shown_for_version", beScript.VERSION );
-                        beScript.log( "2!" );
-            };
-*/
             newsTooltopContainer.qtip({
                 id:'beScript_news_tooltip',
                 position: {
@@ -700,6 +695,7 @@ var beScript = {
                     },
                     hide : function( event, api ) {
                         beScript.Update.init();
+                        api.destroy();
                     }
                 }
             });
@@ -747,7 +743,7 @@ var beScript = {
         if (beScript.Util.checkLocation( "tour/index.php" ) || beScript.Util.checkLocation( "tournaments" )) {
             beScript.tournaments.process();
         }
-        if (beScript.Util.checkLocation( /players\/(info\.php\?id=)?\d+/ )) {
+        if (beScript.Util.checkLocation( /players\/(info\.php\?id=)?\d+/ ) || beScript.Util.checkLocation( /players\/info\.php$/ )) {
             beScript.playerProfile.process();
         }
         
@@ -801,16 +797,16 @@ beScript.Util = {
         "<tr title='${nextBonusPoints - bonusPoints}'><td style='width:80px'>Очки бонусов</td><td>${bonusPoints} / ${nextBonusPoints} = ${Math.round(bonusPoints / nextBonusPoints * 100)}%</td></tr>" +
         "<tr><td style='width:80px'>Мораль</td><td>${morale}</td></tr></table>";
         
-        var tmpl2 = "{{if primaryPosition != 'Gk'}}<table style='color:white'>" +
+        var tmpl2 = "<div style='height:156px'><table style='color:white;'>" +
         "<tr><td>Мастерство</td><td>${power}</td></tr>" +
-        "<tr><td>Отбор</td><td>${tckl}</td></tr>" +
+        "{{if primaryPosition != 'Gk'}}<tr><td>Отбор</td><td>${tckl}</td></tr>" +
         "<tr><td>Опека</td><td>${mrk}</td></tr>" +
         "<tr><td>Дриблинг</td><td>${drbl}</td></tr>" +
         "<tr><td>Прием мяча</td><td>${brcv}</td></tr>" +
         "<tr><td>Выносливость</td><td>${edrnc}</td></tr>" +
         "<tr><td>Пас</td><td>${pass}</td></tr>" +
         "<tr><td>Сила удара</td><td>${shotPwr}</td></tr>" +
-        "<tr><td>Точность удара</td><td>${shotAcc}</td></tr></table>{{/if}}";
+        "<tr><td>Точность удара</td><td>${shotAcc}</td></tr>{{/if}}</table></div>";
         
         $.template(
             "playerDetailsTemplate",
@@ -1498,7 +1494,7 @@ beScript.playerProfile = {
 
             beScript.updateSetting( "playerProfile." + $(this).attr( "id" ), $(this).attr( "value" ) );
             checkRadioByGroupId( "exp_gain_radio", expGainDiv );
-        }, "position:relative;bottom:2px;margin-right:5px;", "position:relative;bottom:1px;border:1px solid black;width:50px;text-align:right" ) );
+        }, "position:relative;top:3px;margin-right:5px;", "float:right;position:relative;bottom:1px;border:1px solid black;width:50px;text-align:right" ) );
 
 
         checkRadioByGroupId( "exp_gain_radio", expGainDiv );
@@ -1626,14 +1622,14 @@ beScript.playerProfile = {
         var playerBehaviourTable = $( ">tr:first:first-child > td:eq(1) > b > table > tbody > tr", playerInfoTable );
         var playerLearningTable = $(">tr:eq(1) > td:eq(1) > b > table > tbody > tr", playerInfoTable);
         
-        player.tckl = parseFloat( playerSkills.eq(0).children().eq(1).text().replace("_","") );
-        player.mrk = parseFloat( playerSkills.eq(1).children().eq(1).text().replace("_","") );
-        player.drbl = parseFloat( playerSkills.eq(2).children().eq(1).text().replace("_","") );
-        player.brcv = parseFloat( playerSkills.eq(3).children().eq(1).text().replace("_","") );
-        player.edrnc = parseFloat( playerSkills.eq(4).children().eq(1).text().replace("_","") );
-        player.pass = parseFloat( playerSkills.eq(5).children().eq(1).text().replace("_","") );
-        player.shotPwr = parseFloat( playerSkills.eq(6).children().eq(1).text().replace("_","") );
-        player.shotAcc = parseFloat( playerSkills.eq(7).children().eq(1).text().replace("_","") );
+        player.tckl = parseFloat( playerSkills.eq(0).children().eq(1).text().replace(/_/g,"") );
+        player.mrk = parseFloat( playerSkills.eq(1).children().eq(1).text().replace(/_/g,"") );
+        player.drbl = parseFloat( playerSkills.eq(2).children().eq(1).text().replace(/_/g,"") );
+        player.brcv = parseFloat( playerSkills.eq(3).children().eq(1).text().replace(/_/g,"") );
+        player.edrnc = parseFloat( playerSkills.eq(4).children().eq(1).text().replace(/_/g,"") );
+        player.pass = parseFloat( playerSkills.eq(5).children().eq(1).text().replace(/_/g,"") );
+        player.shotPwr = parseFloat( playerSkills.eq(6).children().eq(1).text().replace(/_/g,"") );
+        player.shotAcc = parseFloat( playerSkills.eq(7).children().eq(1).text().replace(/_/g,"") );
         
         player.power = parseFloat( playerBehaviourTable.eq(0).children().eq(1).text() );
         player.age = parseInt( playerBehaviourTable.eq(1).children().eq(1).text() );
@@ -1643,7 +1639,7 @@ beScript.playerProfile = {
         player.expPoints = parseInt( playerLearningTable.eq(1).children().eq(1).text().replace( /\d+\(/, "" ).replace( ")", "" ) );
         player.expLevel = parseInt( playerLearningTable.eq(2).children().eq(1).text() );
                 
-        var numberOfTrains = player.trainWithConditions( 30 );
+        var numberOfTrains = player.trainWithConditions();
 
         playerSkills.each( function(i) {
             var td = $( "#beScript_playerProfile_skills_" + i, this );
@@ -1653,14 +1649,14 @@ beScript.playerProfile = {
                 $(this).children().eq(1).after( td );
             }
             
-            td.html( Math.round(player[player.skills[i]] * 100) / 100 );
+            td.html( player[player.skills[i]].toFixed(2) );
         });
 
         playerBehaviourTable.each( function(i) {
             var value = "";
             
             switch ( i ) {
-                case 0: value = Math.round(player.power * 100) / 100; break;
+                case 0: value = player.power.toFixed(2); break;
                 case 1: value = player.age; break;
                 case 2: value = numberOfTrains + "тр."; break;
                 default:
@@ -1689,7 +1685,7 @@ beScript.playerProfile = {
                 case 0: value = player.talent; break;
                 case 1: value = Math.round(player.expPoints) + " (" + expLim + ")"; break;
                 case 2: value = player.expLevel; break;
-                case 3: value = player.talent + player.expLevel / 10; break;
+                case 3: value = Math.min(player.talent + player.expLevel / 10, 15.9).toFixed(1); break;
                 default:
             }
             
@@ -1845,7 +1841,7 @@ beScript.Update = {
                 beScript.log("v:" + thisver + " u:" + checkver);
 
                 if (checkver - thisver > 0) {
-                    $("#ui-tooltip-beScript_menu_tooltip").qtip('destroy');
+                    beScript.menuElem.qtip('destroy');
                     beScript.menuElem.css( {'color':'red','text-decoration':'underline'} );
                     beScript.menuElem = $("#beScript_menu").hover(function() {
                             $(this).css('cursor','pointer');
