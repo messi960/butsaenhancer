@@ -1,7 +1,7 @@
 {
   // Required
   "name": "beScript",
-  "version": "0.1.2",
+  "version": "0.1.3",
 
   // Recommended
   "background_page": "background.html",
@@ -11,5 +11,8 @@
     "js": ["butsaru_enhancer.user.js"],
     "all_frames": true
   }],
-  "permissions": ["http://butsaenhancer.googlecode.com/"]
+  "permissions": ["http://butsaenhancer.googlecode.com/"],
+  "icons": { "16": "16.png",
+             "48": "48.png",
+             "128": "128.png" }
 }
