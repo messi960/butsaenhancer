@@ -195,7 +195,7 @@ var beScript = {
         "Товарищеские матчи сборных" : 0.8,
         "Отборочные Континентов" : 2,
         "Чемпионат Континента" : 2.5,
-        "Коммерческие Турниры" : 0.5,
+        "Коммерческие турниры" : 0.5,
     },
     settings : null,
     updateSetting : function( name, value ) {
@@ -1655,7 +1655,7 @@ beScript.playerProfile = {
                                 }
                                 
                                 match.expPoints = Math.round( match.expPoints );
-                                
+                                beScript.log( match.expPoints + " " + match.minutes + " " + match.homeTeam.name + " " + match.awayTeam.name );
                                 totalPoints += match.expPoints;
                               // FWIW  
                               // matches.push( match );
