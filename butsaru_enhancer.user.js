@@ -134,11 +134,11 @@ var beScript = {
     debug : true,
 
     news : {
-        version : "0.1.1",
-        text : "<span>Перед Вами первая мажорная версия этого скрипта и по этому поводу мне бы хотелось сделать небольшое объявление, рассказать о том, что уже сделано и немножко о дальнейших планах. Сразу успокою - окошко с этой новостью будет показано только один раз - после нажатия на крестик в правом верхнем углу оно пропадет и больше не вылезет :).<br /><br/>Начну с объявления, ибо есть вероятность, что не все дочитают эту простыню до конца :). Скрипт написан на javascript'е с небольшим использованием HTML. Мне <span style='color:red'>очень</span> нужна помощь в дизайне и HTML-верстке. Так что если у Вас есть художественный вкус и опыт в кроссбраузерной верстке, желание поработать на благо общественности, а также немного времени, не сочтите за труд <a href='http://butsa.ru/xml/office/mail.php?act=write&user=16031'>написать мне</a>. Спасибо.<br /><br />Теперь о том, что уже умеет этот скрипт:<br/><ul><li>У ВИП-пользователей в органайзере добавляется счет последнего матча каждой команды.</li><li>Добавлена сортировка команд по разнице с11 на странице конкурса прогнозов.</li><li>Улучшена сортировка таблиц в ростере команд, ДЮСШ и еще на нескольких страницах сайта - теперь все можно сортировать без перезагрузки страниц.</li><li>Сортировка на каждой странице сохраняется.</li><li>Реализован механизм оповещения о наличии обновления скрипта.</li><li>Добавлено всплывающее окошко, появляющееся при наведении мышки на строчку с именем игрока.</li><li>Добавлено всплывающее окошко, которое позволяет добавить бонус игроку не уходя со страницы.</li><li>Сделаны кликабельными некоторые характеристики (деньги, стадион, ЗР итд) в на странице команды.</li><li>Добавлено меню настроек скрипта.</li><li>Добавлена функциональность \"предсказания\" прокачки игрока - все формулы взяты из <a href='http://forum.butsa.ru/index.php?showtopic=140527' target='_blank'>адд-она для Firefox'а</a> за авторством <a href='http://forum.butsa.ru/index.php?showuser=13908' target='_blank'>Snerh'а</a></li></ul>Ну и самое главное, что хотелось бы отметить - скрипт работает в большинстве популярных браузеров (за обидным исключением, наверное, самого популарного браузера - Internet Explorer'а) - Firefox, Opera, Chrome, Safari (только в Mac OS), а значит еще большему количеству человек играть стало удобнее.<br /><br />Подробнее обо всем, что написано выше, можно почитать (и посмотреть скриншоты) в соответствующей <a href='http://forum.butsa.ru/index.php?showtopic=233323' target='_blank'>ветке</a> на форуме.<br/><br/>Далее о планах. Не могу сказать, что они прямо-таки обширные - если честно, то свежих идей не хватает. Пока что планируется сделать следующее:<br/><ul><li>Добавить кнопку отправки к психологу без перезагрузки страницы на страницу ростера.</li><li>Добавить возможность написания сообщения пользователю при наведении мышкой на его ник. Будет полезно президентам, вице и тем, кто пишет много внутри бутсы.</li><li>Для президентов с вице-президентами же планируется добавить дату последнего захода менеджера в игру на страницу с ростером команды.</li><li>Добавить быструю кнопку \"купить 300.000 товара\" на все страницы.</li></ul>Собственно, это пока что все. Я был бы крайне признателен за любые идеи, которые, однако, должны соответствовать следующим ограничениям:<br/><ul><li>Не грузить сервера бутсы. Это значит, что на действие пользователя на активной странице не должно идти обращение к другой странице бутсы. На практике это выливается в то, что нельзя, допустим, сделать красивые всплывающие окошки для чужих команд - только для своих. В случае со своими командами данные обновляются раз в сутки и сохраняются на машине пользователя. Информацию обо всех командах сохранить на каждом компьютере невозможно, а значит ее придется каждый раз скачивать с сервера. Это запрещено.</li><li>Не должна дублироваться ВИП-функциональность. Тут все просто - о рангах ВИП можно почитать в <a href='http://butsa.ru/xml/office/vip.php'>соответствующем разделе</a>.</li></ul><br />Вроде, все. Спасибо, что дочитали до конца.</span><br/><div style='position:relative;float:right;margin:0px 10px 5px 0px'><a href='http://butsa.ru/users/16032' target='_blank'>kovpas</a></div>"
+        version : "0.1.4",
+        text : "<span>Кратенько о том, что происходит со скриптом.<br/><br/>Как многие могли уже заметить, обновления стали происзодить намного реже - если в первую неделю существования скрипта он обновлялся ежедневно (а иногда и по несколько раз на дню), то сейчас обновления выходят раз в два-три дня. На самом деле, это хорошая новость. Это означает, что мелкие дополнения и баги исправлены и сейчас добавляется что-то более-менее существенное, что требует несколько больше времени, чем просто поправить две строчки. Это первое.<br /><br />Второе. Хотелось бы обратить внимание на то, что теперь существует <a href='http://bescript.reformal.ru/'>форма обратной связи</a>. Если Вы придумали что-то новое, что позволит улучшить скрипт - не стесняйтесь, пишите туда. Там же можно обсуждать и голосовать за чужие идеи - все это крайне приветствуется и ценится Вашим покорным слугой ;).<br /><br />Если же Вы обнаружили ошибку, большая просьба, добавить ее <a href='http://code.google.com/p/butsaenhancer/issues/list'>сюда</a>. Прошу обратить особое внимание на эти две ссылки (они, кстати, продублированы в <a href='http://forum.butsa.ru/index.php?showtopic=233323'>официальном топике скрипта</a> на форуме бутсы). Дело в том, что очень трудно на форуме отследить и запомнить все идеи/ошибки, а на этих сайтах все всегда будет на месте и ничего не потеряется. Спасибо!</span>"
     },
     
-	VERSION : "0.1.3",
+	VERSION : "0.1.4",
     NAMESPACE : "butsa_enhancer",
     UPDATES_CHECK_FREQ : 15, //minutes
     TEAM_UPDATES_CHECK_FREQ : 60 * 24, // minutes; recommended value is 60 * 24 = 1440 = 1 day.
@@ -150,6 +150,7 @@ var beScript = {
         sorts_roster : true,
         sorts_school : true,
         sorts_tournament_table : true,
+        sorts_club_table : true,
         
         // Helpers
         helpers_profile : true,
@@ -161,6 +162,8 @@ var beScript = {
         last_matches_in_organizer : true,
         
         player_profile_extender : true,
+
+        finance_report_sum_column : true,
         
         playerProfile : {
             train_regime_radio : 1,
@@ -208,6 +211,7 @@ var beScript = {
     },
     menuElem : null,
     teams : null,
+    activeTeamId : -1,
     trainNumber : -1,
     playingDay : -1,
     season : -1,
@@ -480,6 +484,14 @@ var beScript = {
         for ( var i in _teams ) {
             count++;
         }
+        
+        if ( teamOptions.size() != 0 ) {
+            beScript.activeTeamId = teamOptions.filter( ":selected" )[0].value;
+        } else {
+            beScript.activeTeamId = beScript.Util.checkByRegExp( teamOptionsA.attr('href'), /(\d+)/ )[1];
+        }
+
+        beScript.log( "Active team id is " + beScript.activeTeamId );
 
         if ( (teamOptions.length != count || (teamOptions.length == 0 && teamOptionsA.length != count)) 
             || force 
@@ -490,8 +502,10 @@ var beScript = {
             for ( var i = 0; i < teamOptions.length; i++ ) {
                 var id = teamOptions[i].value;
                 _teams[id] = {};
-                _teams[id].name = teamOptions[i].innerHTML;
+                _teams[id].name = teamOptions.eq(i).text().trim();
                 _teams[id].id = id;
+                
+                
                 _teams[id].players = {status:0};
             }
             
@@ -568,8 +582,9 @@ var beScript = {
             sortsDiv.append( this.createCheckboxWithIdAndText( "sorts_roster", "В ростере основы", null, "", beScript.settings["sorts_roster"] ) );
             sortsDiv.append( this.createCheckboxWithIdAndText( "sorts_school", "В ростере ДЮСШ", null, "", beScript.settings["sorts_school"] ) );
             sortsDiv.append( this.createCheckboxWithIdAndText( "sorts_tournament_table", "В таблице дивизиона", null, "", beScript.settings["sorts_tournament_table"] ) );
+            sortsDiv.append( this.createCheckboxWithIdAndText( "sorts_club_table", "На странице клубного центра", null, "", beScript.settings["sorts_club_table"] ) );
             
-            if (beScript.settings["sorts_roster"] && beScript.settings["sorts_school"] && beScript.settings["sorts_tournament_table"] ) {
+            if (beScript.settings["sorts_roster"] && beScript.settings["sorts_school"] && beScript.settings["sorts_tournament_table"] && beScript.settings["sorts_club_table"] ) {
                 $( "input[id='all_sorts']", sortsDiv ).attr( "checked", "true" );
             }
             
@@ -591,6 +606,7 @@ var beScript = {
             otherDiv.append( this.createCheckboxWithIdAndText( "kp_helper", "Помощник в КП", null, "", beScript.settings["links_in_roster"] ) );
             otherDiv.append( this.createCheckboxWithIdAndText( "last_matches_in_organizer", "Результаты матчей в органайзере", null, "", beScript.settings["last_matches_in_organizer"] ) );
             otherDiv.append( this.createCheckboxWithIdAndText( "player_profile_extender", "Расчет мастерства игрока в профиле", null, "", beScript.settings["player_profile_extender"] ) );
+            otherDiv.append( this.createCheckboxWithIdAndText( "finance_report_sum_column", "Финансы - сумма за день", null, "", beScript.settings["finance_report_sum_column"] ) );
             
             content.append( otherDiv );
 
@@ -709,7 +725,7 @@ var beScript = {
                         text: "beScript (v" + beScript.VERSION + ") :: Новости",
                         button: "Закрыть",
                     },
-                    text: "<span>Приветствую, " + userName + "!</span><br/><br/>" + beScript.news.text,
+                    text: "<span>Приветствую, " + userName + "!</span><br/><br/>" + beScript.news.text + "<br/><div style='position:relative;float:right;margin:0px 10px 5px 0px'><a href='http://butsa.ru/users/16032' target='_blank'>kovpas</a></div>",
                 },
                 style: {
                     classes:'ui-tooltip-dark ui-tooltip-rounded beScript-news',
@@ -766,6 +782,13 @@ var beScript = {
         }
         if (beScript.Util.checkLocation( "organizer" )) {
             beScript.organizer.process();
+        }
+        if (beScript.Util.checkLocation( /club\.php$/ ) 
+            || (beScript.Util.checkLocation( "club.php" ) && beScript.Util.checkLocation( "type=players/club" ) && beScript.Util.checkLocation( "act=select" )) ) {
+            beScript.club.process();
+        }
+        if (beScript.Util.checkLocation( "finances?/report.php" )) {
+            beScript.finances.process();
         }
         if (beScript.Util.checkLocation( "tour/index.php" ) || beScript.Util.checkLocation( "tournaments" )) {
             beScript.tournaments.process();
@@ -956,6 +979,43 @@ beScript.Util = {
         
         headerRow.wrap( "<thead style='font-size: 11px;'/>" )
 
+
+        table.bind("sortEnd", function() { 
+            var sortedColumns = $(".headerSortDown,.headerSortUp", table);
+            var prnt = $("th", $(sortedColumns[0]).parent());
+            if ( sortedColumns.length == 1 ) {
+                sortSettings = [];
+            }
+            for (var i = 0; i < sortedColumns.length; i++ ) {
+                var sortedClass = $(sortedColumns[i]).attr( "class" );
+                var index = prnt.index( sortedColumns[i] );
+
+                if ( index < 0 ) {
+                    continue;
+                }
+                
+                var sortDirection = 1;
+                
+                if ( beScript.Util.checkByRegExp( sortedClass, "Down" ) ) {
+                    sortDirection = 0;
+                }
+                var found = false;
+                for ( var k = 0; k < sortSettings.length; k++ ) {
+                    if ( sortSettings[k][0] == index ) {
+                        found = true;
+                        sortSettings[k][1] = sortDirection;
+                        
+                        break;
+                    }
+                }
+                
+                if ( !found ) {
+                    sortSettings.push( [index, sortDirection] );
+                }
+            }
+            beScript.Util.serialize( settingName, sortSettings );
+        });
+        
         var sortSettings = beScript.Util.deserialize( settingName, [defaultSort] );
         
         table.tablesorter({
@@ -998,41 +1058,6 @@ beScript.Util = {
             }
         });
         
-        table.bind("sortEnd", function() { 
-            var sortedColumns = $(".headerSortDown,.headerSortUp", table);
-            var prnt = $("th", $(sortedColumns[0]).parent());
-            if ( sortedColumns.length == 1 ) {
-                sortSettings = [];
-            }
-            for (var i = 0; i < sortedColumns.length; i++ ) {
-                var sortedClass = $(sortedColumns[i]).attr( "class" );
-                var index = prnt.index( sortedColumns[i] );
-
-                if ( index < 0 ) {
-                    continue;
-                }
-                
-                var sortDirection = 1;
-                
-                if ( beScript.Util.checkByRegExp( sortedClass, "Down" ) ) {
-                    sortDirection = 0;
-                }
-                var found = false;
-                for ( var k = 0; k < sortSettings.length; k++ ) {
-                    if ( sortSettings[k][0] == index ) {
-                        found = true;
-                        sortSettings[k][1] = sortDirection;
-                        
-                        break;
-                    }
-                }
-                
-                if ( !found ) {
-                    sortSettings.push( [index, sortDirection] );
-                }
-            }
-            beScript.Util.serialize( settingName, sortSettings );
-        });
     },
 };
 
@@ -1361,7 +1386,7 @@ beScript.roster = {
     process : function() {
         var playersTable = $($(".maintable")[2]);
         
-        if ( beScript.settings.sorts_roster ) {
+        if ( beScript.settings.sorts_roster && !beScript.Util.checkLocation( "act=allmatches" ) ) {
             var _headers = { 
                 3: { sorter:'beScript.sorter.positions' },
             };
@@ -1428,6 +1453,72 @@ beScript.tournaments = {
             
             beScript.Util.makeTableSortable( "tournaments", table, _headers, [0, 0], 0 );
         }
+    }
+};
+
+beScript.club = {
+    best11ToPsycho : function( table ) {
+        var processbest11ToPsychoButton = function() {
+            var players = beScript.teams[beScript.activeTeamId].players;
+            var bestEleven = {};
+            var playersPower = [];
+            
+            for ( var id in players ) {
+                if ( players[id].power ) {
+                    playersPower.push( {id:id, power:players[id].power} );
+                }
+            }
+            
+            playersPower.sort( function(player1, player2) {
+                if ( player1.power == player2.power ) return 0;
+                return (player1.power > player2.power)?-1:1;
+            });
+            
+            for ( var i = 0; i < 11; i++ ) {
+                bestEleven[playersPower[i].id] = players[playersPower[i].id];
+            }
+            
+            var trs = $( "tbody > tr" , table );
+            
+            trs.each( function() {
+                var tr = $(this);
+                var tds = $( "td", tr );
+                var playerId = parseInt(beScript.Util.checkByRegExp( $( ">a", tds.eq(1) ).attr( "href" ), /\/(\d+)/ )[1]);
+                var player = bestEleven[playerId];
+                
+                if ( player && parseInt(tds.eq(8).text().trim()) < 20 ) {
+                    $( "input", tds.eq(11) ).attr( "checked", "checked" );
+                } else {
+                    $( "input", tds.eq(11) ).removeAttr( "checked" );
+                }
+            });
+            
+            $( "input[type='submit']", table ).click();
+        }
+        
+        beScript.log( $( "input[type='submit']", table ).size() );
+        $( "input[type='submit']", table ).before( '<input type="button" id="beScript_best11ToPsycho" value="Отправить 11 лучших к психологу" class="button" style="margin-right:10px"/>' );
+        $( "#beScript_best11ToPsycho", table ).click( processbest11ToPsychoButton );
+    },
+    process : function() {
+        var table = $(".maintable").eq(0);
+        if ( beScript.settings.sorts_club_table !== false ) {
+            var _headers = { 
+                3: { sorter:'beScript.sorter.positions' },
+                9: { sorter:false },
+            };
+            
+            try {
+                beScript.Util.makeTableSortable( "club", table, _headers, [8, 0], 2 );
+            } catch (e) {
+                // ignoring the problem with a checkbox in header. 
+            }
+
+            // removing shit from a table
+            $( "> tfoot > tr[class='header'] > td:last", table ).remove();
+        }
+        
+        beScript.club.best11ToPsycho( table );
     }
 };
 
@@ -1841,6 +1932,67 @@ beScript.school = {
             beScript.Util.makeTableSortable( "school", playersTable, _headers, [3, 0], 1 );
         }
     }
+};
+
+beScript.finances = {
+    addDaySumColumn : function() {
+        var financesTable = $( ".maintable" );
+        var tableheader = $('tr[bgcolor="#D3E1EC"][align="center"]', financesTable);
+        
+        tableheader.append("<td><span title=\"Деньги за день\"><b>За день</b></span></td>");
+
+        var financeOperations = $( "tr[bgcolor='#ffffff'],tr[bgcolor='#EEF4FA']", financesTable );
+        var operationsSumByDate = {};
+        
+        financeOperations.each(function(i) {
+            var tds = $( "td", $(this) );
+            var date = tds.eq(0).text().trim().split( " " )[0];
+            var value = parseInt(tds.eq(2).text().trim().replace( /\./g, "" ));
+            var operation = operationsSumByDate[date];
+            if ( !operation ) {
+                operation = {};
+            }
+            if ( !operation.val ) {
+                operation.val = 0;
+            }
+            if ( !operation.num ) {
+                operation.num = 0;
+            }
+            operation.val += value;
+            operation.num++;
+            operationsSumByDate[date] = operation;
+        });
+        beScript.log( operationsSumByDate );
+        var counter = 0;
+        var zebraCounter = 0;
+        
+        for ( var date in operationsSumByDate ) {
+            var operation = operationsSumByDate[date];
+            beScript.log( date + " - " + operation.val );
+            var rexSplitter = /^-?(\d{1,3})(\d{3})?(\d{3})?(\d{3})?(\d{3})?$/g;
+            var match = rexSplitter.exec(operation.val + "");
+            var valStr = match[1];
+            for ( var i = 2; i < match.length; i++ ) {
+                if( match[i] != undefined ) {
+                    valStr += "." + match[i];
+                } else {
+                    break;
+                }
+            }
+            
+            beScript.log( valStr );
+            
+            financeOperations.eq(counter).append( "<td rowspan='" + operation.num + "' bgcolor='" + ((zebraCounter % 2 == 0)?"#ffffff":"#EEF4FA") + "'><div align='right' style='color:" + ((operation.val > 0)?"green":"A70000") + "'><nobr>" + ((operation.val > 0)?"+":"-") + valStr + "</nobr></div></td>" );
+            
+            zebraCounter++;
+            counter += operation.num;
+        }
+    },
+    process : function() {
+        if ( beScript.settings.finance_report_sum_column !== false && (!beScript.Util.checkLocation( "sort" ) || beScript.Util.checkLocation( "sort=OperationDate" )) ) {
+            beScript.finances.addDaySumColumn();
+        }
+    }  
 };
 
 beScript.train = {
