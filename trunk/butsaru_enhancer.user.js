@@ -138,11 +138,12 @@ var beScript = {
         text : "<span>Кратенько о том, что происходит со скриптом.<br/><br/>Как многие могли уже заметить, обновления стали происзодить намного реже - если в первую неделю существования скрипта он обновлялся ежедневно (а иногда и по несколько раз на дню), то сейчас обновления выходят раз в два-три дня. На самом деле, это хорошая новость. Это означает, что мелкие дополнения и баги исправлены и сейчас добавляется что-то более-менее существенное, что требует несколько больше времени, чем просто поправить две строчки. Это первое.<br /><br />Второе. Хотелось бы обратить внимание на то, что теперь существует <a href='http://bescript.reformal.ru/'>форма обратной связи</a>. Если Вы придумали что-то новое, что позволит улучшить скрипт - не стесняйтесь, пишите туда. Там же можно обсуждать и голосовать за чужие идеи - все это крайне приветствуется и ценится Вашим покорным слугой ;).<br /><br />Если же Вы обнаружили ошибку, большая просьба, добавить ее <a href='http://code.google.com/p/butsaenhancer/issues/list'>сюда</a>. Прошу обратить особое внимание на эти две ссылки (они, кстати, продублированы в <a href='http://forum.butsa.ru/index.php?showtopic=233323'>официальном топике скрипта</a> на форуме бутсы). Дело в том, что очень трудно на форуме отследить и запомнить все идеи/ошибки, а на этих сайтах все всегда будет на месте и ничего не потеряется. Спасибо!</span>"
     },
     
-	VERSION : "0.1.5",
+	VERSION : "0.1.6",
     NAMESPACE : "butsa_enhancer",
     UPDATES_CHECK_FREQ : 15, //minutes
     TEAM_UPDATES_CHECK_FREQ : 60 * 24, // minutes; recommended value is 60 * 24 = 1440 = 1 day.
     TRAIN_UPDATES_CHECK_FREQ : 60 * 24, // minutes; recommended value is 60 * 24 = 1440 = 1 day.
+    BUILDINGS_UPDATES_CHECK_FREQ : 60 * 24, // minutes; recommended value is 60 * 24 = 1440 = 1 day.
     S_ID : 101727,
     default_settings : {
         menu_helper_shown : false,
@@ -152,9 +153,12 @@ var beScript = {
         sorts_tournament_table : true,
         sorts_club_table : true,
         
-        // Helpers
+        // Roster
         helpers_profile : true,
         helpers_bonuses : true,
+        helpers_fast_repair : true,
+        helpers_repair_reminder : true,
+        helpers_prices_link : true,
         
         // Other
         links_in_roster : true,
@@ -309,7 +313,7 @@ var beScript = {
         var timeUpdaterFired = beScript.Util.checkPeriod( "teamsUpdTime", beScript.TEAM_UPDATES_CHECK_FREQ * 1000 * 60 );
         team.players.status = (playersLoaded && !timeUpdaterFired && !force)?team.players.status:0;
         
-        if ( !playersLoaded || timeUpdaterFired || team.players.status != 15 ) {
+        if ( !playersLoaded || timeUpdaterFired || team.players.status != (1 + 2 + 4 + 8) ) {
             if ( (team.players.status & 1) == 0 ) {
                 $.ajax({
                     url: "/roster/" + team.id,
@@ -476,6 +480,131 @@ var beScript = {
             }
         }
     },
+    reloadBuildings : function( data ) {
+        var team = beScript.teams[beScript.activeTeamId];
+        var buildingsTrs = $(".maintable table > tbody > tr[bgcolor='#F5F8FA']", data);
+        var buildings = team.buildings;
+        
+        buildingsTrs.each( function(i) {
+            var index = Math.floor(i / 3);
+            var id = -1;
+            
+            if ( i % 3 == 0 ) {
+                id = parseInt( beScript.Util.checkByRegExp( $("a", this).attr( "href" ), /\?id=(\d+)/ )[1] );
+            } else {
+                id = parseInt( $( "input[name^=building]", this ).attr( "value" ) );
+            }
+            
+            if ( id > 0 ) {
+                var building = buildings[id];
+                                            
+                if ( !building ) {
+                    building = {};
+                }
+
+                switch ( i % 3 ) {
+                    case 0: 
+                        var fullName = beScript.Util.checkByRegExp( $(this).text().trim(), /(.*)-(\d)/ );
+                        building.name = fullName[1];
+                        building.level = parseInt(fullName[2]);
+                        building.id = id;
+                        break;
+                    case 1: 
+                        var info = beScript.Util.checkByRegExp( $(this).text(), /Постройка\/Ремонт\s*:\s([\d\.]+)\s([\d:]+)\s*Состояние\s*:\s(\d+)%/ );
+                        building.condition = parseInt( info[3] );
+                        var dateComps = info[1].split( "." );
+                        var timeComps = info[2].split( ":" );
+                        building.repairDate = Date.UTC( dateComps[2], parseInt(dateComps[1]) - 1, dateComps[0], timeComps[0], timeComps[1], timeComps[2] );
+                        break;
+                    case 2: break;
+                    default : break;
+                }
+                
+                buildings[id] = building;
+            }
+        });
+        
+        buildings.status |= 1;
+        beScript.teams[team.id].buildings = buildings;
+        beScript.Util.serialize( "teams", beScript.teams );
+        beScript.log( beScript.teams[team.id].buildings );
+    },
+    reloadStadium : function( data ) {
+        var team = beScript.teams[beScript.activeTeamId];
+        var buildingsTrs = $(".maintable table > tbody > tr[bgcolor='#F5F8FA']", data);
+        beScript.log( buildingsTrs.size() );
+        var buildings = team.buildings;
+
+        buildingsTrs.each( function(i) {
+            var index = Math.floor(i / 3);
+            var id = -1;
+            
+            if ( i % 3 == 0 ) {
+                id = parseInt( beScript.Util.checkByRegExp( $("a", this).attr( "href" ), /\?id=(\d+)/ )[1] );
+            } else {
+                id = parseInt( $( "input[name^=building]", this ).attr( "value" ) );
+            }
+            
+            if ( id > 0 ) {
+                var building = buildings[id];
+                                            
+                if ( !building ) {
+                    building = {};
+                }
+
+                switch ( i % 3 ) {
+                    case 0: 
+                        var fullName = beScript.Util.checkByRegExp( $(this).text().trim(), /(.*)-(\d)/ );
+                        building.name = fullName[1];
+                        building.level = parseInt(fullName[2]);
+                        building.id = id;
+                        break;
+                    case 1: 
+                        var info = beScript.Util.checkByRegExp( $(this).text(), /Постройка\/Ремонт\s*:\s([\d\.]+)\s([\d:]+)\s*Состояние\s*:\s(\d+)%/ );
+                        building.condition = parseInt( info[3] );
+                        var dateComps = info[1].split( "." );
+                        var timeComps = info[2].split( ":" );
+                        building.repairDate = Date.UTC( dateComps[2], parseInt(dateComps[1]) - 1, dateComps[0], timeComps[0], timeComps[1], timeComps[2] );
+                        break;
+                    case 2: break;
+                    default : break;
+                }
+                
+                buildings[id] = building;
+            }
+        });
+        
+        buildings.status |= 2;
+        beScript.teams[team.id].buildings = buildings;
+        beScript.Util.serialize( "teams", beScript.teams );
+        beScript.log( beScript.teams[team.id].buildings );
+    },
+    loadBuildings : function( force, page, pageData ) {    
+        var team = beScript.teams[beScript.activeTeamId];
+        var buildingsLoaded = (team.buildings && $(team.buildings).length > 0);
+        var timeUpdaterFired = beScript.Util.checkPeriod( "buildingsUpdTime_" + beScript.activeTeamId, beScript.BUILDINGS_UPDATES_CHECK_FREQ * 1000 * 60 );
+        
+        if ( !team.buildings || force ) {
+            team.buildings = {status:0};
+        }
+        
+        team.buildings.status = (buildingsLoaded && !timeUpdaterFired && !force)?team.buildings.status:0;
+        
+        if ( !buildingsLoaded || timeUpdaterFired || team.buildings.status != (1 + 2) ) {
+            if ( (team.buildings.status & 1) == 0 ) {
+                $.ajax({
+                    url: "/buildings/",
+                    success: beScript.reloadBuildings
+                });
+            }
+            if ( (team.buildings.status & 2) == 0 ) {
+                $.ajax({
+                    url: "/stadium/",
+                    success: beScript.reloadStadium
+                });
+            }
+        }
+    },
     loadTeams : function( force ) {
         var _teams = beScript.Util.deserialize( "teams", {} );
         var teamOptions = $("select", beScript.menuElem.parent().parent()).children();
@@ -505,8 +634,8 @@ var beScript = {
                 _teams[id].name = teamOptions.eq(i).text().trim();
                 _teams[id].id = id;
                 
-                
                 _teams[id].players = {status:0};
+                _teams[id].buildings = {status:0};
             }
             
             if ( teamOptions.length == 0 ) { // User has 1 team
@@ -515,8 +644,9 @@ var beScript = {
                 _teams[id] = {};
                 _teams[id].name = teamOptionsA.text().trim();
                 _teams[id].id = id;
+
                 _teams[id].players = {status:0};
-                beScript.loadTeamPlayers( _teams[id] );
+                _teams[id].buildings = {status:0};
             }
             
             beScript.Util.serialize( "teams", _teams );
@@ -547,7 +677,7 @@ var beScript = {
             greetingTd.attr( "width", "800" );
             greetingTd.before( "<td width='160' id='beScript_td'/>" );
             var beScript_td = $( "#beScript_td" );
-            beScript_td.html( "<span id='beScript_menu' style='margin-left:20px;color:white;text-decoration:underline'>beScript (v" + beScript.VERSION + ")</span>" );
+            beScript_td.html( "<span id='beScript_menu' style='margin-left:20px;color:white;text-decoration:underline'>beScript (v" + beScript.VERSION + ")</span>&nbsp;<a id='be_script_idea' href='http://bescript.reformal.ru/' target='_blank'><img height='10' src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAABnRSTlMA/wD/AP83WBt9AAAB+0lEQVR42m2SzWsTQRiHfzNd4+Zr2agopeqlKBQqVtAepOBJrZZQP4o3v0DoTbyIIBSll4KXehClEs+1117MHyBYg9p6aJsmpEFNSjaJzTZskt3tZl4P2dRN9GUu7/A88/GbYUSEVgmnvhY3luacwnfGQYTm7m7PkbPh85PhU6PgUotiruDYpfkH9HNRvXTP1z8KWQFjMIp25kMxvoC+aN/9GJN8AEBERKTHp8svFCq9IsqQSFFznZrrJNJEm6S9zD8LaIvTLdLd4dej4NHbp9nQY1g7gIO/JUGOiMTztVhqMFYD4J5MkMnUGuof0TTQVULhkR1yzPYCAABiEraTCDjokbEXAwDG0DBRzQvGOwTlylRlZSqiJiFJ4MylCSBC09ES4tDY09ac66kXHuragF0SkGwIyx1kYZ9tFkQ5P9A79qRD4LJy8OpM6QuwHwgBQSAIhAAf8p/Qe22G+5UOAYByJmo2Riy9QzArMOsjB85F9zDuuR8PD44bW4C/LfhRzUEdGgfj/xOAQP+wsSo7ZYjfoAqognpKDp0Y9jKMvCE69ufZCc0qbuUK27pRa9gn1WN33i27n8Iba7vzpQ/fvHj5+sbGZjKZlWvmm/nZux76HwFIZrLH06vZH7mqoTcapi2635139bcmbnz7mlhZXlp4H7NM7e3c6y7gDwIW8gowEmYhAAAAAElFTkSuQmCC'/></a>" );
         }
         
         beScript.menuElem = $("#beScript_menu").hover(function() {
@@ -590,22 +720,30 @@ var beScript = {
             
             content.append( sortsDiv, "<br />" );
 
+            var rosterDiv = $( "<div id='roster_div' />" );
+            rosterDiv.append( "<span style='font-size:12px'>Ростер команды</span>" );
 
-            var helpersDiv = $( "<div id='helpers_div' />" );
-            helpersDiv.append( "<span style='font-size:12px'>Всплывающие окошки</span>" );
+            rosterDiv.append( this.createCheckboxWithIdAndText( "helpers_profile", "Всплывающее окошко профайла", null, "", beScript.settings["helpers_profile"] ) );
+            rosterDiv.append( this.createCheckboxWithIdAndText( "helpers_bonuses", "Всплывающее окошко бонусов", null, "", beScript.settings["helpers_bonuses"], "Если набрано 100% бонусных очков" ) );
+            rosterDiv.append( this.createCheckboxWithIdAndText( "helpers_fast_repair", "Быстрый ремонт", null, "", beScript.settings["helpers_fast_repair"] ) );
+            rosterDiv.append( this.createCheckboxWithIdAndText( "helpers_repair_reminder", "Напоминание о ремонте", null, "", beScript.settings["helpers_repair_reminder"] ) );
+            rosterDiv.append( this.createCheckboxWithIdAndText( "helpers_prices_link", "Ссылка на цены билетов", null, "", beScript.settings["helpers_prices_link"] ) );
+            rosterDiv.append( this.createCheckboxWithIdAndText( "links_in_roster", "Ссылки в ростере", null, "", beScript.settings["links_in_roster"] ) );
             
-            helpersDiv.append( this.createCheckboxWithIdAndText( "helpers_profile", "Профайл в ростере", null, "", beScript.settings["helpers_profile"] ) );
-            helpersDiv.append( this.createCheckboxWithIdAndText( "helpers_bonuses", "Бонусы в ростере", null, "", beScript.settings["helpers_bonuses"], "Если набрано 100% бонусных очков" ) );
+            content.append( rosterDiv, "<br />" );
+
+            var playerProfileDiv = $( "<div id='player_profile_div' />" );
+            playerProfileDiv.append( "<span style='font-size:12px'>Профиль игрока</span>" );
+
+            playerProfileDiv.append( this.createCheckboxWithIdAndText( "player_profile_extender", "Расчет мастерства игрока в профиле", null, "", beScript.settings["player_profile_extender"] ) );
             
-            content.append( helpersDiv, "<br />" );
+            content.append( playerProfileDiv, "<br />" );
 
             var otherDiv = $( "<div id='other_div' />" );
             otherDiv.append( "<span style='font-size:12px'>Прочее</span>" );
 
-            otherDiv.append( this.createCheckboxWithIdAndText( "links_in_roster", "Ссылки в ростере", null, "", beScript.settings["links_in_roster"] ) );
             otherDiv.append( this.createCheckboxWithIdAndText( "kp_helper", "Помощник в КП", null, "", beScript.settings["links_in_roster"] ) );
             otherDiv.append( this.createCheckboxWithIdAndText( "last_matches_in_organizer", "Результаты матчей в органайзере", null, "", beScript.settings["last_matches_in_organizer"] ) );
-            otherDiv.append( this.createCheckboxWithIdAndText( "player_profile_extender", "Расчет мастерства игрока в профиле", null, "", beScript.settings["player_profile_extender"] ) );
             otherDiv.append( this.createCheckboxWithIdAndText( "finance_report_sum_column", "Финансы - сумма за день", null, "", beScript.settings["finance_report_sum_column"] ) );
             
             content.append( otherDiv );
@@ -639,35 +777,31 @@ var beScript = {
                     }
                 }
             });
-        }
-                
-        if ( beScript.settings.menu_helper_shown !== true ) {
-            beScript.menuElem.qtip({
-                id:'beScript_menu_helper_tooltip',
+            
+            $("#be_script_idea").qtip({
+                id : 'be_script_idea',
                 position: {
                     my : 'left center',  // Position my top left...
                     at : 'right center', // at the bottom right of...
                 },
-                show: {
-                    ready: true
+                hide: { 
+                    delay : 200,
+                    fixed : true
                 },
-                content: {
-                    text: "Нажми меня!"
+                show: { 
+                    delay : 200,
                 },
-                style: 'ui-tooltip-dark ui-tooltip-rounded',
-                events: {
-                    show : function( event, api ) {
-                        var timeout = 1300; //ms 
-                        setTimeout((function() {
-                            api.hide();
-                            _addMenu();
-                        }), timeout);
-                    },
-                }
+                content : {
+                    text : "Появилась идея? Видишь ошибку? Жми!"
+                },
+                style: {
+                    classes: 'ui-tooltip-dark ui-tooltip-shadow ui-tooltip-bonus',
+                }                    
             });
-        } else {
-            _addMenu();
+
         }
+                
+        _addMenu();
     },
     updateTrainNumber : function() {
         beScript.trainNumber = beScript.Util.deserialize( "trainNumber", -1 );
@@ -750,7 +884,7 @@ var beScript = {
     },
     init : function() {
         beScript.log( "jQuery version: " + $().jquery );
-        
+
         beScript.settings = beScript.Util.deserialize( "settings", beScript.default_settings );
         
         if ( !beScript.settings.playerProfile ) {
@@ -760,12 +894,13 @@ var beScript = {
         beScript.addBeScriptMenu();
         beScript.initBonusesByAbbr();
         beScript.loadTeams();
+        beScript.loadBuildings();
         
         beScript.updateTrainNumber();
         
         beScript.Util.init();
         
-        if (beScript.Util.checkLocation( "kp.php" )) {
+        if (beScript.Util.checkLocation( "kp.php" ) || beScript.Util.checkLocation( /kp\/\?act=next$/ )) {
             beScript.forecasts.process();
         }
         if (beScript.Util.checkLocation( "school" )) {
@@ -789,6 +924,12 @@ var beScript = {
         }
         if (beScript.Util.checkLocation( "finances?/report.php" )) {
             beScript.finances.process();
+        }
+        if (beScript.Util.checkLocation( "buildings.php" ) || beScript.Util.checkLocation( /buildings\/\?act=list/ ) || beScript.Util.checkLocation( /buildings\/$/ )) {
+            beScript.buildings.process();
+        }
+        if (beScript.Util.checkLocation( "stadium.php" ) || beScript.Util.checkLocation( /stadium\/$/ )) {
+            beScript.stadium.process();
         }
         if (beScript.Util.checkLocation( "tour/index.php" ) || beScript.Util.checkLocation( "tournaments" )) {
             beScript.tournaments.process();
@@ -1359,7 +1500,7 @@ beScript.roster = {
             });
         }
     },
-    makeTeamInfoLinks : function() {
+    makeTeamInfoLinks : function( currteamid ) {
         var division = $("input[name='Division']").attr( "value" );
         if ( division ) {
             var divisionId = beScript.Util.checkByRegExp(division, /division=(\d+)/)[1];
@@ -1377,14 +1518,174 @@ beScript.roster = {
             }
             var visRatSpan = $("input[name='VisRat']").next();
             visRatSpan.wrap( "<a href='http://www.butsa.ru/xml/ratings/ratings.php?class=1&id=29&Division=" + divisionId + "' />" );
-            var stadiumSpan = $("input[name='Stadium']").next();
-            stadiumSpan.wrap( "<a href='http://www.butsa.ru/xml/ratings/ratings.php?class=1&id=7&Division=" + divisionId + "' />" );
             var playersSpan = $("input[name='Players']").next();
             playersSpan.wrap( "<a href='http://www.butsa.ru/xml/ratings/ratings.php?class=1&id=3&Division=" + divisionId + "' />" );
+            
+            var stadiumSpan = $("input[name='Stadium']").next();
+            stadiumSpan.wrap( "<a href='http://www.butsa.ru/xml/ratings/ratings.php?class=1&id=7&Division=" + divisionId + "' />" );
+        }
+    },
+    addPricesLink : function(currteamid) {
+        var division = $("input[name='Division']").attr( "value" );
+        if ( division ) {
+            var divisionId = beScript.Util.checkByRegExp(division, /division=(\d+)/)[1];
+            var stadiumSpan = $("input[name='Stadium']").next();
+            
+            if ( beScript.activeTeamId == parseInt(currteamid) ) {
+                var dollarIcon = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAALEQAACxEBf2RfkQAAABl0RVh0U29mdHdhcmUAUGFpbnQuTkVUIHYzLjUuNUmK/OAAAADySURBVDhPlZPbDYJAEEW1AuxAO9AOtAQ6gD8+jRVoB/pLF3YgHWgH2oF2oPeQmWSzbBYkuWF3mTk7L+azxNO27ULHpXS0z4emaa4p28GZnDfSU/pG4mw1CpHR3RzfBuKNAN6yALvdby6173CSKgMAJ730o4/bIGxS6QGjYbuBjIsA8NAaTQcAksM5Kh75XyYVMIgkhnhd6n/SWVpHiMA7A2i8lUEkdIBCUlCPwodrGIyMdtJJ6qfOWtjZGhCQLMD7jWHtAHovfQxQ5eaANvrUAWH9Mvm+GJvGdQTx3PkX1pO6YAO11xsnRGr5m1Nkq0F2En/PpBYe7WbCLQAAAABJRU5ErkJggg==";
+                var img = $( "<img style='margin-left:3px;margin-right:5px' name='beScript_ticket_prices' height='10' src='" + dollarIcon + "' />" );
+                stadiumSpan.before( img );
+                img.wrap( "<a href='http://butsa.ru/stadium/?act=tickets' target='_blank' />" );
+            }
+        }
+    },
+    addRepairLinks : function() {
+        var buildingsTable = $(".maintable:eq(2)").parents("table:eq(0)").nextAll("table:eq(0)");
+        var header = $( ".header", buildingsTable );
+        var content = $( "tr[bgcolor='ffffff']" );
+        var repairImage = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAABmJLR0QA/gD+AP7rGNSCAAAACXBIWXMAAAsRAAALEQF/ZF+RAAAACXZwQWcAAAAMAAAADADOpTJ+AAABpElEQVQoz3WQv6tScRjGn/f99kO6ZS5+7+hgIYRBw3HQ5CwqCE2SQ4NUo6vgIIIt/QP9AY1FuIg4XAkaAgMHuQ7G4RANqZQo5xwhIbmK8rZ4zKXP+vJ5eJ+HAICIFDPv4/H4w2Aw+Hi9Xt8cDodvReQPAAIg8CEiAGAASKfTz9vttti2LcVi8QOA4OH+D6UURyKRR0qpAAAkk8lXg8FAer2ehMPhF4fQo8WBQOBOuVz+aJrmawBYLBY/iAjT6XTrOM4GgBKR40vXtNapVCqlTdOstFqtZDQava+1xmg0ug7gioj2B2nvS7dyudw7y7JkuVzuZ7OZjMfj3WQykWq1+pWZ7/nDnJY+y2Qy70ul0mUikfjU7XZ3nuftPM+TWq1mEVGMiI6S3+mMiKIA7hqG8cayLHFd92q1Wkm9Xv8O4MHpWERExMyklAKAG4VC4cJxHPE8b7PdbqXRaHxjZkOdSiICEWFm3tm2/Vkp9SSfz583m81NNps9d103dir4CAAF4He/37/UWj+NxWK35/M5Op3OL/wPv2AoFHpWqVR+GobxBcDLv0SWqPpsyqlzAAAAAElFTkSuQmCC";
+        var team = beScript.teams[beScript.activeTeamId];
+        
+        var buildingsToFix = {};
+        var toFix = false;
+        
+        $( "td:even", content ).each( function(i) {
+            var links = $( "a", this );
+            
+            links.each(function() {
+                $this = $(this);
+                var id = parseInt(beScript.Util.checkByRegExp( $this.attr( "href" ), /\?id=(\d+)/ )[1]);
+                var building = team.buildings[id];
+                
+                $this.attr( 'id', 'beScript_repair_a_id' + id );
+
+                if ( building.condition < 100 ) {
+                    toFix = true;
+                    $this.css( 'color', 'A70000' );
+                
+                    var diff = ((new Date().getTime() - building.repairDate) / 1000 / 60 / 60 / 24);
+                    var daysLN = Math.floor((new Date().getTime() - building.lastNotification) / 1000 / 60 / 60 / 24);
+                    var days = Math.floor(diff);
+                    var hrs = Math.floor((diff - days) * 24);
+                    
+                    if ( days >= 11 && (daysLN >= 1 || building.lastNotification == undefined) &&  beScript.settings.helpers_repair_reminder !== false ) {
+                        var btf = buildingsToFix[days] || "";
+                        btf += building.name + " - " + building.condition + "%<br />";
+                        buildingsToFix[days] = btf;
+                        beScript.teams[beScript.activeTeamId].buildings[id].lastNotification = new Date().getTime();
+                    }
+                    
+                    if ( beScript.settings.helpers_fast_repair !== false ) {
+                        var content = building.condition + "%. Ремонт: " + days + " дней " + hrs + " часов назад."
+                        var img = $( "<img style='margin-left:3px;margin-right:5px' name='beScript_repairImage_" + id + "' height='10' src='" + repairImage + "' />" );
+                        $this.before( img );
+
+                        img.qtip({
+                            position: {
+                                my: 'right center',
+                                at: 'left center',
+                            },
+                            content : {
+                                text : content
+                            },
+                            style: {
+                                classes: 'ui-tooltip-dark ui-tooltip-shadow',
+                            },
+                            show: {
+                                delay: 10
+                            },
+                            hide: {
+                                delay: 10
+                            },
+                        });
+                    }
+                }
+            });
+        });
+
+        if ( toFix && beScript.settings.helpers_repair_reminder !== false ) {
+            $( "td:eq(0)", header ).prepend( "<img name='beScript_repairImage_all' height='10' src='" + repairImage + "' />&nbsp;&nbsp;" );
+            var str = "";
+            for ( var days in buildingsToFix ) {
+                str += "<span>Последний ремонт " + days + " дней назад:</span><br><br>";
+                str += "<span>" + buildingsToFix[days] + "</span>";
+            }
+            
+            createGrowl( str, "Требуется ремонт!" );
+            beScript.Util.serialize( "teams", beScript.teams );
+        }
+        
+        if ( beScript.settings.helpers_fast_repair !== false ) {
+            var repairImages = $( "img[name^='beScript_repairImage']", buildingsTable );
+            
+            repairImages.hover(function() {
+                    $(this).css('cursor','pointer');
+                }, function() {
+                    $(this).css('cursor','auto');
+                });
+                
+            repairImages.click( function() {
+                var id = parseInt( (beScript.Util.checkByRegExp( $(this).attr( "name" ), /\d+/ )||["-1"])[0] );
+                var addAct = "";
+                var textId = "&BuildingID=" + id + "&id=" + id;
+                
+                if ( id == -1 ) {
+                    addAct = "all";
+                    textId = "";
+                }
+                
+                var image = $(this);
+                var url = "/xml/team/buildings.php?type=team/buildings&act=repair" + addAct + ((id == -1)?"2":"");
+                
+                beScript.log( url );
+                $.ajax({
+                    type: "POST",
+                    url: url,
+                    data: "step=1&type=team/buildings&act=repair" + addAct + ((id == -1)?"2":"") + "&oldact=repair" + addAct + textId,
+                    success: function(data) {
+                        if ( id != -1 ) {
+                            var building = team.buildings[id];
+
+                            if ( $( "img[src='http://butsa.ru/images/icons/ok.gif']", data ).length ) {
+                                beScript.teams[beScript.activeTeamId].buildings[id].condition = 100;
+                                beScript.teams[beScript.activeTeamId].buildings[id].repairDate = new Date().getTime();
+                                
+                                beScript.Util.serialize( "teams", beScript.teams );
+                                
+                                $( '#beScript_repair_a_id' + id, buildingsTable ).css( 'color', '' );
+                                image.remove();
+                                createGrowl( "Постройка " + building.name + " отремонтирована.", "Постройка отремонтирована" );
+                            } else {
+                                createGrowl( "Постройка " + building.name + " не может быть отремонтирована, так как на счету команды недостаточно средств.", "Невозможно отремонтировать постройку" );
+                            }
+                        } else {
+                            if ( $( "img[src='http://butsa.ru/images/icons/ok.gif']", data ).length ) {
+                                for ( var buildingId in team.buildings ) {
+                                    var building = team.buildings[buildingId];
+                                    var repairDate = new Date().getTime();
+                                    
+                                    if ( building.condition < 100 ) {
+                                        beScript.teams[beScript.activeTeamId].buildings[buildingId].condition = 100;
+                                        beScript.teams[beScript.activeTeamId].buildings[buildingId].repairDate = repairDate;
+                                    }
+                                    
+                                    $( "[id^='beScript_repair_a_id']", buildingsTable ).css( 'color', '' );
+                                    repairImages.remove();
+                                }
+                                
+                                beScript.Util.serialize( "teams", beScript.teams );
+                                createGrowl( "Все постройки отремонтированы.", "Все постройки отремонтированы" );
+                            } else {
+                                createGrowl( "Постройки не могут быть отремонтированы, так как на счету команды недостаточно средств.", "Невозможно отремонтировать постройки" );
+                            }
+                        }
+                    }
+                });
+            });        
         }
     },
     process : function() {
-        var playersTable = $($(".maintable")[2]);
+        var playersTable = $(".maintable").eq(2);
         
         if ( beScript.settings.sorts_roster && !beScript.Util.checkLocation( "act=allmatches" ) ) {
             var _headers = { 
@@ -1427,17 +1728,39 @@ beScript.roster = {
             beScript.Util.makeTableSortable( "roster", playersTable, _headers, [3, 0], 1 );
         }
         
+        var currteamid = $( "input[name='id']" ).attr( "value" );
+
         if ( beScript.settings.links_in_roster ) {
-            beScript.roster.makeTeamInfoLinks();
-        }
+            beScript.roster.makeTeamInfoLinks( currteamid );
+        }        
         
         if ( beScript.settings.helpers_profile ) {
-            var currteamid = $( "input[name='id']" ).attr( "value" );
             beScript.roster.addPlayersTips(playersTable, currteamid);
         }
+        
         if ( beScript.settings.helpers_bonuses ) {
             beScript.roster.makeBonusPointsClickable(playersTable);
         }
+
+        if ( (beScript.settings.helpers_fast_repair !== false || beScript.settings.helpers_repair_reminder !== false) && beScript.activeTeamId == parseInt(currteamid) ) {
+            beScript.roster.addRepairLinks();
+        }
+        
+        if (beScript.settings.helpers_prices_link !== false && beScript.activeTeamId == parseInt(currteamid)) {
+            beScript.roster.addPricesLink(currteamid);
+        }
+    }
+};
+
+beScript.buildings = {
+    process : function() {
+        beScript.reloadBuildings( $(document) );
+    }
+};
+
+beScript.stadium = {
+    process : function() {
+        beScript.reloadStadium( $(document) );
     }
 };
 
@@ -1948,26 +2271,49 @@ beScript.finances = {
 
         var financeOperations = $( "tr[bgcolor='#ffffff'],tr[bgcolor='#EEF4FA']", financesTable );
         var operationsSumByDate = {};
+        var idOperations = ["Продажа товара",
+                            "Покупка товара", 
+                            "Спонсорские", 
+                            "Зарплаты игроков",
+                            "Зарплаты специалистов", 
+                            "Стипендия игрокам ДЮСШ",
+                            "Содержание стадиона",
+                            "Доход от стадиона",
+                            "Доход от гостиницы",
+                            "Расходы на проведение матча", 
+                            "Проценты по срочному вкладу", 
+                            "Проценты по кредиту", 
+                            "Возврат банковского кредита", 
+                            "Налог за пользование Арендой",
+                            "Спонсорские - ТВ",
+                            "Продажа по себестоимости"]
         
         financeOperations.each(function(i) {
             var tds = $( "td", $(this) );
             var date = tds.eq(0).text().trim().split( " " )[0];
             var value = parseInt(tds.eq(2).text().trim().replace( /\./g, "" ));
             var operation = operationsSumByDate[date];
+            var operationName = tds.eq(1).text().trim();
+            
             if ( !operation ) {
                 operation = {};
-            }
-            if ( !operation.val ) {
                 operation.val = 0;
-            }
-            if ( !operation.num ) {
                 operation.num = 0;
+                operation.idVal = 0;
             }
+            
             operation.val += value;
             operation.num++;
+
+            if ( operationName in oc(idOperations) ) {
+                operation.idVal += value;
+            } else {
+                beScript.log( operationName );
+            }
+            
             operationsSumByDate[date] = operation;
         });
-        beScript.log( operationsSumByDate );
+
         var counter = 0;
         var zebraCounter = 0;
         
@@ -1985,9 +2331,44 @@ beScript.finances = {
                 }
             }
             
-            beScript.log( valStr );
-            
-            financeOperations.eq(counter).append( "<td rowspan='" + operation.num + "' bgcolor='" + ((zebraCounter % 2 == 0)?"#ffffff":"#EEF4FA") + "'><div align='right' style='color:" + ((operation.val > 0)?"green":"A70000") + "'><nobr>" + ((operation.val > 0)?"+":"-") + valStr + "</nobr></div></td>" );
+            var idValStr = "";
+                beScript.log( operation.idVal );
+            if ( operation.idVal != 0 ) {
+                var rexSplitter2 = /^-?(\d{1,3})(\d{3})?(\d{3})?(\d{3})?(\d{3})?$/g;
+                match = rexSplitter2.exec(operation.idVal + "");
+                beScript.log( match );
+                idValStr = match[1];
+                for ( var i = 2; i < match.length; i++ ) {
+                    if( match[i] != undefined ) {
+                        idValStr += "." + match[i];
+                    } else {
+                        break;
+                    }
+                }
+            }
+                        
+            var spentForDay = $( "<td rowspan='" + operation.num + "' bgcolor='" + ((zebraCounter % 2 == 0)?"#ffffff":"#EEF4FA") + "'><div align='right' style='color:" + ((operation.val > 0)?"green":"A70000") + "'><nobr>" + ((operation.val > 0)?"+":"-") + valStr + "</nobr></div></td>" );
+            if ( operation.idVal != 0 ) {
+                spentForDay.qtip({
+                    position: {
+                        my: 'left center',
+                        at: 'right center',
+                    },
+                    content : {
+                        text : "За ИД:<div align='right' style='color:" + ((operation.idVal > 0)?"green":"A70000") + "'><nobr>" + ((operation.idVal > 0)?"+":"-") + idValStr + "</nobr></div>"
+                    },
+                    style: {
+                        classes: 'ui-tooltip-blue ui-tooltip-shadow',
+                    },
+                    show: {
+                        delay: 10
+                    },
+                    hide: {
+                        delay: 10
+                    },
+                });
+            }
+            financeOperations.eq(counter).append( spentForDay );
             
             zebraCounter++;
             counter += operation.num;
@@ -2105,49 +2486,61 @@ beScript.Update = {
 		};
 
 		this.update = function(checkver) {
-                beScript.Util.serialize( "latestVersion", checkver.trim() );
-                vnum = checkver;
+            beScript.Util.serialize( "latestVersion", checkver.trim() );
+            vnum = checkver;
 
-                var flag = false;
-                checkver = beScript.Util.parseVersionNumber(checkver);
-                thisver =  beScript.Util.parseVersionNumber(beScript.VERSION);
+            var flag = false;
+            checkver = beScript.Util.parseVersionNumber(checkver);
+            thisver =  beScript.Util.parseVersionNumber(beScript.VERSION);
 
-                beScript.log("update processed");
-                beScript.log("v:" + thisver + " u:" + checkver);
+            beScript.log("update processed");
+            beScript.log("v:" + thisver + " u:" + checkver);
 
-                if (checkver - thisver > 0) {
-                    beScript.menuElem.qtip('destroy');
-                    beScript.menuElem.css( {'color':'red','text-decoration':'underline'} );
-                    beScript.menuElem = $("#beScript_menu").hover(function() {
-                            $(this).css('cursor','pointer');
-                        }, function() {
-                            $(this).css('cursor','auto');
-                        });
-
-                    beScript.menuElem.qtip({
-                        id:'beScript_menu_version_helper_tooltip',
-                        position: {
-                            my : 'right center',  // Position my top left...
-                            at : 'left center', // at the bottom right of...
-                        },
-                        show: {
-                            ready: true
-                        },
-                        hide: {
-                            event: 'click'
-                        },
-                        content: {
-                            text: "Доступно обновление " + vnum.trim() + "!"
-                        },
-                        style: 'ui-tooltip-dark ui-tooltip-rounded',
+            if (checkver - thisver > 0) {
+                var newVersionLink = $( "<span>Скачать?</span>" );
+                newVersionLink.css( {'color':'red','text-decoration':'underline'} );
+         
+                if ( window.navigator.vendor && window.navigator.vendor.match(/Google/) ) {
+                    newVersionLink.click( function() {
+                        window.location='http://butsaenhancer.googlecode.com/svn/trunk/Butsa%20Enhancer.crx';
                     });
-                                        
-                    if ( window.navigator.vendor && window.navigator.vendor.match(/Google/) ) {
-                        beScript.menuElem.attr( "onClick", "javascript:window.location='http://butsaenhancer.googlecode.com/svn/trunk/Butsa%20Enhancer.crx'" );
-                    } else {
-                        beScript.menuElem.attr( "onClick", "javascript:window.location='http://userscripts.org/scripts/source/101727.user.js'" );
-                    }
+                } else {
+                    newVersionLink.click( function() {
+                        window.location='http://userscripts.org/scripts/source/101727.user.js'; 
+                    });
                 }
+                
+                newVersionLink.hover(function() {
+                        $(this).css('cursor','pointer');
+                    }, function() {
+                        $(this).css('cursor','auto');
+                    });
+                
+                var newVersionNotification = $( "<span>Доступно обновление " + vnum.trim() + "!<br/></span>" ).append( newVersionLink );
+                
+                $( "#beScript_td" ).qtip({
+                    id:'beScript_menu_update_tooltip',
+                    position: {
+                        my : 'right center',  // Position my top left...
+                        at : 'left center', // at the bottom right of...
+                    },
+                    show: {
+                        ready: true
+                    },
+                    hide : {
+                        event: false,
+                    },
+                    content: {
+                        text: newVersionNotification,
+                        title: {
+                           text: "Обновление",
+                           button: true
+                        }
+                    },
+                    style: 'ui-tooltip-dark ui-tooltip-shadow',
+                });
+                
+            }
 		};
 
 		this.install = function() {
@@ -2180,9 +2573,11 @@ if((typeof GM_getValue==="undefined")||(GM_getValue.toString&&GM_getValue.toStri
 
 // jQuery plugin - qTip 2 nightly build
 eval(function(p,a,c,k,e,d){e=function(c){return(c<a?"":e(parseInt(c/a)))+((c=c%a)>35?String.fromCharCode(c+29):c.toString(36))};if(!''.replace(/^/,String)){while(c--){d[e(c)]=k[c]||e(c)}k=[function(e){return d[e]}];e=function(){return'\\w+'};c=1};while(c--){if(k[c]){p=p.replace(new RegExp('\\b'+e(c)+'\\b','g'),k[c])}}return p}('"7L 5u",9(a,b,c){9 z(c){Q f=S,g=c.26.P.1x,h=c.31,i=h.1s,j="#1b-2r",k=".5v",l=k+c.1p,m="1I-1x-1b",o;c.2K.1x={"^P.1x.(2T|1L)$":9(){f.25(),h.2r.1W(i.1I(":1P"))}},a.1m(f,{25:9(){T(!g.2T)N f;o=f.2h(),i.17(m,d).1q(k).1q(l).19("45"+k+" 51"+k,9(a,b,c){f[a.1v.24("1s","")](a,c)}).19("58"+k,9(a,b,c){o[0].16.2R=c-1}).19("59"+k,9(b){a("["+m+"]:1P").2v(i).7u().1b("2n",b)}),g.5o&&a(b).1q(l).19("4P"+l,9(a){a.5w===27&&i.1M(n)&&c.R(a)}),g.1L&&h.2r.1q(l).19("4g"+l,9(a){i.1M(n)&&c.R(a)});N f},2h:9(){Q c=a(j);T(c.1a){h.2r=c;N c}o=h.2r=a("<2i />",{1p:j.2x(1),Y:{15:"4I",M:0,O:0,2D:"3L"},3D:9(){N e}}).2X(1C.30),a(b).1q(k).19("2e"+k,9(){o.Y({X:14.1F(a(b).X(),a(1C).X()),V:14.1F(a(b).V(),a(1C).V())})}).2q("2e");N o},1W:9(b,c,j){T(b&&b.3k())N f;Q k=g.1H,l=c?"P":"R",n=a("["+m+"]:1P").2v(i),p;o||(o=f.2h());T(o.1I(":5y")&&!c||!c&&n.1a)N f;c&&h.2r.Y("7P",g.1L?"7j":""),o.56(d,e),a.1K(k)?k.1O(o,c):k===e?o[l]():o.57(1y(j,10)||3q,c?.7:0,9(){c||a(S).R()});N f},P:9(a,b){N f.1W(a,d,b)},R:9(a,b){N f.1W(a,e,b)},2l:9(){Q d=o;d&&(d=a("["+m+"]").2v(i).1a<1,d?(h.2r.1Q(),a(b).1q(k)):h.2r.1q(k+c.1p));N i.3s(m).1q(k)}}),f.25()}9 y(b,g){9 v(a){Q b=a.1e==="y",c=n[b?"V":"X"],d=n[b?"X":"V"],e=a.1n().2C("1f")>-1,f=c*(e?.5:1),g=14.5A,h=14.3M,i,j,k,l=14.44(g(f,2)+g(d,2)),m=[p/f*l,p/d*l];m[2]=14.44(g(m[0],2)-g(p,2)),m[3]=14.44(g(m[1],2)-g(p,2)),i=l+m[2]+m[3]+(e?0:m[0]),j=i/l,k=[h(j*d),h(j*c)];N{X:k[b?0:1],V:k[b?1:0]}}9 u(b){Q c=k.1w&&b.y==="M",d=c?k.1w:k.U,e=a.29.5m,f=e?"-5B-":a.29.4M?"-4M-":"",g=b.y+(e?"":"-")+b.x,h=f+(e?"1d-4p-"+g:"1d-"+g+"-4p");N 1y(d.Y(h),10)||1y(l.Y(h),10)||0}9 t(a,b,c){b=b?b:a[a.1e];Q d=k.1w&&a.y==="M",e=d?k.1w:k.U,f="1d-"+b+"-V",g=1y(e.Y(f),10);N(c?g||1y(l.Y(f),10):g)||0}9 s(f,g,h,l){T(k.12){Q n=a.1m({},i.1k),o=h.3F,p=b.26.15.2A.4j.2B(" "),q=p[0],r=p[1]||p[0],s={O:e,M:e,x:0,y:0},t,u={},v;i.1k.2j!==d&&(q==="2o"&&n.1e==="x"&&o.O&&n.y!=="1f"?n.1e=n.1e==="x"?"y":"x":q==="3A"&&o.O&&(n.x=n.x==="1f"?o.O>0?"O":"1h":n.x==="O"?"1h":"O"),r==="2o"&&n.1e==="y"&&o.M&&n.x!=="1f"?n.1e=n.1e==="y"?"x":"y":r==="3A"&&o.M&&(n.y=n.y==="1f"?o.M>0?"M":"1i":n.y==="M"?"1i":"M"),n.1n()!==m.1k&&(m.M!==o.M||m.O!==o.O)&&i.3f(n,e)),t=i.15(n,o),t.1h!==c&&(t.O=-t.1h),t.1i!==c&&(t.M=-t.1i),t.3Y=14.1F(0,j.W);T(s.O=q==="2o"&&!!o.O)n.x==="1f"?u["2S-O"]=s.x=t["2S-O"]-o.O:(v=t.1h!==c?[o.O,-t.O]:[-o.O,t.O],(s.x=14.1F(v[0],v[1]))>v[0]&&(h.O-=o.O,s.O=e),u[t.1h!==c?"1h":"O"]=s.x);T(s.M=r==="2o"&&!!o.M)n.y==="1f"?u["2S-M"]=s.y=t["2S-M"]-o.M:(v=t.1i!==c?[o.M,-t.M]:[-o.M,t.M],(s.y=14.1F(v[0],v[1]))>v[0]&&(h.M-=o.M,s.M=e),u[t.1i!==c?"1i":"M"]=s.y);k.12.Y(u).1W(!(s.x&&s.y||n.x==="1f"&&s.y||n.y==="1f"&&s.x)),h.O-=t.O.3t?t.3Y:q!=="2o"||s.M||!s.O&&!s.M?t.O:0,h.M-=t.M.3t?t.3Y:r!=="2o"||s.O||!s.O&&!s.M?t.M:0,m.O=o.O,m.M=o.M,m.1k=n.1n()}}Q i=S,j=b.26.16.12,k=b.31,l=k.1s,m={M:0,O:0,1k:""},n={V:j.V,X:j.X},o={},p=j.1d||0,q=".1b-12",r=a("<4C />")[0].3P;i.1k=f,i.3C=f,i.15={},b.2K.12={"^15.1N|16.12.(1k|3C|1d)$":9(){i.25()||i.2l(),b.1X()},"^16.12.(X|V)$":9(){n={V:j.V,X:j.X},i.2h(),i.3f(),b.1X()},"^U.18.1o|16.(3h|2f)$":9(){k.12&&i.3f()}},a.1m(i,{25:9(){Q b=i.4q()&&(r||a.29.3H);b&&(i.2h(),i.3f(),l.1q(q).19("5a"+q,s));N b},4q:9(){Q a=j.1k,c=b.26.15,f=c.2b,g=c.1N.1n?c.1N.1n():c.1N;T(a===e||g===e&&f===e)N e;a===d?i.1k=1G h.2t(g):a.1n||(i.1k=1G h.2t(a),i.1k.2j=d);N i.1k.1n()!=="4v"},4x:9(){Q c,d,e,f=k.12.Y({6H:"",1d:""}),g=i.1k,h=g[g.1e],m="1d-"+h+"-3e",p="1d"+h.3t(0)+h.2x(1)+"73",q=/5E?\\(0, 0, 0(, 0)?\\)|3z/i,r="5F-3e",s="3z",t="1u-1s-5l",u=a(1C.30).Y("3e"),v=b.31.U.Y("3e"),w=k.1w&&(g.y==="M"||g.y==="1f"&&f.15().M+n.X/2+j.W<k.1w.3a(1)),x=w?k.1w:k.U;l.3v(t),d=f.Y(r)||s,e=f[0].16[p];T(!d||q.1B(d))o.2J=x.Y(r),q.1B(o.2J)&&(o.2J=l.Y(r)||d);T(!e||q.1B(e)){o.1d=l.Y(m);T(q.1B(o.1d)||o.1d===u)o.1d=x.Y(m),o.1d===v&&(o.1d=e)}a("*",f).2P(f).Y(r,s).Y("1d",""),l.4k(t)},2h:9(){Q b=n.V,c=n.X,d;k.12&&k.12.1Q(),k.12=a("<2i />",{"1Y":"1u-1s-12"}).Y({V:b,X:c}).6c(l),r?a("<4C />").2X(k.12)[0].3P("2d").4t():(d=\'<4i:42 5H="0,0" 16="2D:54-33; 15:4I; 4A:2k(#3u#4B);"></4i:42>\',k.12.2M(p?d+=d:d))},3f:9(b,c){Q g=k.12,l=g.6a(),m=n.V,q=n.X,s="3U 5K ",u="3U 5L 3z",w=j.3C,y=14.3M,z,A,B,C,D;b||(b=i.1k),w===e?w=b:(w=1G h.2t(w),w.1e=b.1e,w.x==="3y"?w.x=b.x:w.y==="3y"?w.y=b.y:w.x===w.y&&(w[b.1e]=b[b.1e])),z=w.1e,i.4x(),p=o.1d==="3z"||o.1d==="#5O"?0:j.1d===d?t(b,f,d):j.1d,B=x(w,m,q),D=v(b),g.Y(D),b.1e==="y"?C=[y(w.x==="O"?p:w.x==="1h"?D.V-m-p:(D.V-m)/2),y(w.y==="M"?D.X-q:0)]:C=[y(w.x==="O"?D.V-m:0),y(w.y==="M"?p:w.y==="1i"?D.X-q-p:(D.X-q)/2)],r?(l.17(D),A=l[0].3P("2d"),A.5P(),A.4t(),A.5Q(0,0,4u,4u),A.5R(C[0],C[1]),A.5S(),A.5T(B[0][0],B[0][1]),A.4r(B[1][0],B[1][1]),A.4r(B[2][0],B[2][1]),A.5U(),A.5V=o.2J,A.5W=o.1d,A.5s=p*2,A.5X="4z",A.5Y=5p,A.4y(),A.2J()):(B="m"+B[0][0]+","+B[0][1]+" l"+B[1][0]+","+B[1][1]+" "+B[2][0]+","+B[2][1]+" 5Z",C[2]=p&&/^(r|b)/i.1B(b.1n())?4N(a.29.4c,10)===8?2:1:0,l.Y({60:""+(w.1n().2C("1f")>-1),O:C[0]-C[2]*4w(z==="x"),M:C[1]-C[2]*4w(z==="y"),V:m+p,X:q+p}).1l(9(b){Q c=a(S);c.17({61:m+p+" "+(q+p),7M:B,62:o.2J,63:!!b,64:!b}).Y({2D:p||b?"33":"3L"}),!b&&p>0&&c.2M()===""&&c.2M(\'<4i:4y 65="\'+p*2+\'3U" 3e="\'+o.1d+\'" 66="67" 68="4z"  16="4A:2k(#3u#4B); 2D:54-33;" />\')})),c!==e&&i.15(b)},15:9(b){Q c=k.12,f={},g=14.1F(0,j.W),h,l,m;T(j.1k===e||!c)N e;b=b||i.1k,h=b.1e,l=v(b),m=[b.x,b.y],h==="x"&&m.6b(),a.1l(m,9(a,c){Q e,i;c==="1f"?(e=h==="y"?"O":"M",f[e]="50%",f["2S-"+e]=-14.3M(l[h==="y"?"V":"X"]/2)+g):(e=t(b,c,d),i=u(b),f[c]=a?t(b,c):g+(i>e?i:0))}),f[b[h]]-=l[h==="x"?"V":"X"],c.Y({M:"",1i:"",O:"",1h:"",2S:""}).Y(f);N f},2l:9(){k.12&&k.12.1Q(),l.1q(q)}}),i.25()}9 x(a,b,c){Q d=14.3x(b/2),e=14.3x(c/2),f={4Z:[[0,0],[b,c],[b,0]],4E:[[0,0],[b,0],[0,c]],4F:[[0,c],[b,0],[b,c]],4G:[[0,0],[0,c],[b,c]],7s:[[0,c],[d,0],[b,c]],6d:[[0,0],[b,0],[d,c]],6e:[[0,0],[b,e],[0,c]],6f:[[b,0],[b,c],[0,e]]};f.6g=f.4Z,f.6h=f.4E,f.6i=f.4F,f.6j=f.4G;N f[a.1n()]}9 w(b){Q c=S,f=b.31.1s,g=b.26.U.1z,h=".1b-1z",i=/<43\\b[^<]*(?:(?!<\\/43>)<[^<]*)*<\\/43>/55,j=d;b.2K.1z={"^U.1z":9(a,b,d){b==="1z"&&(g=d),b==="2c"?c.25():g&&g.2k?c.3X():f.1q(h)}},a.1m(c,{25:9(){g&&g.2k&&f.1q(h)[g.2c?"6k":"19"]("45"+h,c.3X);N c},3X:9(d,h){9 p(a,c,d){b.2Y("U.1o",c+": "+d),n()}9 o(c){l&&(c=a("<2i/>").37(c.24(i,"")).4K(l)),b.2Y("U.1o",c),n()}9 n(){m&&(f.Y("47",""),h=e)}T(d&&d.3k())N c;Q j=g.2k.2C(" "),k=g.2k,l,m=g.2c&&!g.4J&&h;m&&f.Y("47","49"),j>-1&&(l=k.2x(j),k=k.2x(0,j)),a.1z(a.1m({6l:o,5b:p,6m:b},g,{2k:k}));N c}}),c.25()}9 v(b,c){Q i,j,k,l,m=a(S),n=a(1C.30),o=S===1C?n:m,p=m.1T?m.1T(c.1T):f,q=c.1T.1v==="6n"&&p?p[c.1T.46]:f,v=m.2s(c.1T.46||"6o");78{v=11 v==="1n"?(1G 77("N "+v))():v}76(w){s("6q 6s 6t 6v 6w 2s: "+v)}l=a.1m(d,{},g.35,c,11 v==="1j"?t(v):f,t(q||p)),p&&a.4l(S,"1T"),j=l.15,l.1p=b;T("34"===11 l.U.1o){k=m.17(l.U.17);T(l.U.17!==e&&k)l.U.1o=k;2G N e}j.1t===e&&(j.1t=n),j.13===e&&(j.13=o),l.P.13===e&&(l.P.13=o),l.P.32===d&&(l.P.32=n),l.R.13===e&&(l.R.13=o),l.15.28===d&&(l.15.28=j.1t),j.2b=1G h.2t(j.2b),j.1N=1G h.2t(j.1N);T(a.2s(S,"1b"))T(l.4h)m.1b("2l");2G T(l.4h===e)N e;a.17(S,"18")&&(a.17(S,r,a.17(S,"18")),S.3n("18")),i=1G u(m,l,b,!!k),a.2s(S,"1b",i),m.19("1Q.1b",9(){i.2l()});N i}9 u(c,p,q,s){9 L(c,d,e,f){f=1y(f,10)!==0;Q g=".1b-"+q,h={P:c&&p.P.13[0],R:d&&p.R.13[0],1s:e&&u.1g&&A.1s[0],U:e&&u.1g&&A.U[0],1t:f&&p.15.1t[0]===v?1C:p.15.1t[0],3E:f&&b};u.1g?a([]).70(a.6Z([h.P,h.R,h.1s,h.1t,h.U,h.3E],9(a){N 11 a==="1j"})).1q(g):c&&p.P.13.1q(g+"-2h")}9 K(d,f,h,j){9 D(a){z.1I(":1P")&&u.1X(a)}9 C(a){T(z.1M(l))N e;1E(u.1r.1Z),u.1r.1Z=2V(9(){u.R(a)},p.R.1Z)}9 y(b){T(z.1M(l))N e;Q c=a(b.3w||b.13),d=c.6Y(m)[0]===z[0],f=c[0]===r.P[0];1E(u.1r.P),1E(u.1r.R);T(n.13==="1D"&&d||p.R.2j&&(/1D(48|2H|4b)/.1B(b.1v)&&(d||f))){b.6y(),b.6W();N e}p.R.21>0?u.1r.R=2V(9(){u.R(b)},p.R.21):u.R(b)}9 x(a){T(z.1M(l))N e;r.P.2q("1b-"+q+"-1Z"),1E(u.1r.P),1E(u.1r.R);Q b=9(){u.P(a)};p.P.21>0?u.1r.P=2V(b,p.P.21):b()}Q k=".1b-"+q,n=p.15,r={P:p.P.13,R:p.R.13,1t:n.1t[0]===v?a(1C):n.1t,3Z:a(1C)},s={P:a.3B(""+p.P.1c).2B(" "),R:a.3B(""+p.R.1c).2B(" ")},t=a.29.3H&&1y(a.29.4c,10)===6,w;h&&(p.R.2j&&(r.R=r.R.2P(z),z.19("6A"+k,9(){z.1M(l)||1E(u.1r.R)})),n.13==="1D"&&n.2A.1D&&p.R.1c&&z.19("2Q"+k,9(a){(a.3w||a.13)!==r.P[0]&&u.R(a)}),z.19("2y"+k,9(a){u[a.1v==="2y"?"2n":"1L"](a)}),z.19("2y"+k+" 2Q"+k,9(a){z.2a(o,a.1v==="2y")})),f&&("2F"===11 p.R.1Z&&(r.P.19("1b-"+q+"-1Z",C),a.1l(g.5c,9(a,b){r.R.2P(A.1s).19(b+k+"-1Z",C)})),a.1l(s.R,9(b,c){Q d=a.6B(c,s.P),e=a(r.R);d>-1&&e.2P(r.P).1a===e.1a||c==="3T"?(r.P.19(c+k,9(a){z.1I(":1P")?y(a):x(a)}),2w s.P[d]):r.R.19(c+k,y)})),d&&(a.1l(s.P,9(a,b){r.P.19(b+k,x)}),"2F"===11 p.R.3S&&r.P.19("3i"+k,9(a){Q b=B.3c||{},c=p.R.3S,d=14.2U;b&&(d(a.2g-b.2g)>=c||d(a.2u-b.2u)>=c)&&u.R(a)})),j&&((n.2A.2e||n.28)&&a(a.1c.6C.2e?n.28:b).19("2e"+k,D),(n.28||t&&z.Y("15")==="2j")&&a(n.28).19("4a"+k,D),/3T/i.1B(p.R.1c)&&r.3Z.19("3D"+k,9(b){Q d=a(b.13);d.6S(m).1a===0&&d.2P(c).1a>1&&z.1I(":1P")&&!z.1M(l)&&u.R(b)}),p.R.2H&&/2Q|4Q/i.1B(p.R.1c)&&a(b).19("1L"+k+" 1D"+(p.R.2H.2C("6D")>-1?"48":"2H")+k,9(a){a.3w||u.R(a)}),n.13==="1D"&&r.3Z.19("3i"+k,9(a){n.2A.1D&&!z.1M(l)&&z.1I(":1P")&&u.1X(a||i)}))}9 J(b,d){9 g(a){9 c(c){(b=b.2v(S)).1a===0&&(u.2E(),u.1X(B.1c),a())}Q b;T((b=f.4K("3r:2v([X]):2v([V])")).1a===0)N c.1O(b);b.1l(9(a,b){(9 d(){Q e=u.1r.3r;T(b.X&&b.V){1E(e[a]);N c.1O(b)}e[a]=2V(d,20)})()})}Q f=A.U;b=b||p.U.1o;T(!u.1g||!b)N e;a.1K(b)&&(b=b.1O(c,u)||""),b.1V&&b.1a>0?f.4L().37(b.Y({2D:"33"})):f.2M(b),u.1g<0?z.3G("3R",g):(y=0,g(a.4n));N u}9 I(b){Q d=A.18;T(!u.1g||!b)N e;a.1K(b)&&(b=b.1O(c,u)||""),b.1V&&b.1a>0?d.4L().37(b.Y({2D:"33"})):d.2M(b),u.2E(),u.1g&&z.1I(":1P")&&u.1X(B.1c)}9 H(a){Q b=A.1A,c=A.18;T(!u.1g)N e;a?(c||G(),F()):b.1Q()}9 G(){Q b=w+"-18";A.1w&&E(),A.1w=a("<2i />",{"1Y":j+"-1w "+(p.16.2f?"1u-2f-4R":"")}).37(A.18=a("<2i />",{1p:b,"1Y":j+"-18","1J-3W":d})).6G(A.U),p.U.18.1A?F():u.1g&&u.2E()}9 F(){Q b=p.U.18.1A,c=11 b==="1n",d=c?b:"6J 1s";A.1A&&A.1A.1Q(),b.1V?A.1A=b:A.1A=a("<a />",{"1Y":"1u-3g-3u "+(p.16.2f?"":j+"-3p"),18:d,"1J-6K":d}).6L(a("<6N />",{"1Y":"1u-3p 1u-3p-6O",2M:"&6Q;"})),A.1A.2X(A.1w).17("4U","1A").40(9(b){a(S).2a("1u-3g-40",b.1v==="2y")}).4g(9(a){z.1M(l)||u.R(a);N e}).19("3D 4P 5e 6T 4Q",9(b){a(S).2a("1u-3g-6V 1u-3g-2n",b.1v.2x(-4)==="71")}),u.2E()}9 E(){A.18&&(A.1w.1Q(),A.1w=A.18=A.1A=f,u.1X())}9 D(){Q a=p.16.2f;z.2a(k,a),A.U.2a(k+"-U",a),A.1w&&A.1w.2a(k+"-4R",a),A.1A&&A.1A.2a(j+"-3p",!a)}9 C(a){Q b=0,c,d=p,e=a.2B(".");3d(d=d[e[b++]])b<e.1a&&(c=d);N[c||p,e.74()]}Q u=S,v=1C.30,w=j+"-"+q,x=0,y=0,z=a(),A,B;u.1p=q,u.1g=e,u.31=A={13:c},u.1r={3r:[]},u.26=p,u.2K={},u.1R={},u.2Z=B={1c:{},13:f,2z:e,17:s},u.2K.79={"^1p$":9(b,c,f){Q h=f===d?g.4d:f,i=j+"-"+h;h!==e&&h.1a>0&&!a("#"+i).1a&&(z[0].1p=i,A.U[0].1p=i+"-U",A.18[0].1p=i+"-18")},"^U.1o$":9(a,b,c){J(c)},"^U.18.1o$":9(a,b,c){T(!c)N E();!A.18&&c&&G(),I(c)},"^U.18.1A$":9(a,b,c){H(c)},"^15.(1N|2b)$":9(a,b,c){"1n"===11 c&&(a[b]=1G h.2t(c))},"^15.1t$":9(a,b,c){u.1g&&z.2X(c)},"^(P|R).(1c|13|2j|21|1Z)$":9(a,b,c,d,e){Q f=[1,0,0];f[e[1]==="P"?"4e":"7b"](0),L.23(u,f),K.23(u,[1,1,0,0])},"^P.2O$":9(){u.1g?u.P():u.1S(1)},"^16.3h$":9(b,c,d){a.17(z[0],"1Y",j+" 1b 1u-4D-4T "+d)},"^16.2f|U.18":D,"^4f.(1S|P|4b|R|2n|1L)$":9(b,c,d){z[(a.1K(d)?"":"7c")+"19"]("1s"+c,d)}},a.1m(u,{1S:9(b){T(u.1g)N u;Q f=p.U.18.1o,g=a.3b("7d");a.17(c[0],"1J-3O",w),z=A.1s=a("<2i/>",{1p:w,"1Y":j+" 1b 1u-4D-4T "+p.16.3h,V:p.16.V||"",4U:"7e","1J-7f":"7g","1J-3W":e,"1J-3O":w+"-U","1J-49":d}).2a(l,B.2z).2s("1b",u).2X(p.15.1t).37(A.U=a("<2i />",{"1Y":j+"-U",1p:w+"-U","1J-3W":d})),u.1g=-1,y=1,f&&(G(),I(f)),J(),u.1g=d,D(),a.1l(p.4f,9(b,c){a.1K(c)&&z.19(b==="1W"?"45 51":"1s"+b,c)}),a.1l(h,9(){S.2L==="1S"&&S(u)}),K(1,1,1,1),z.3G("3R",9(a){g.3j=B.1c,z.2q(g,[u]),y=0,u.2E(),(p.P.2O||b)&&u.P(B.1c),a()});N u},4s:9(a){Q b,c;5n(a.2p()){39"7k":b={X:z.3a(),V:z.3m()};2I;39"W":b=h.W(z,p.15.1t);2I;3u:c=C(a.2p()),b=c[0][c[1]],b=b.1e?b.1n():b}N b},2Y:9(b,c){9 m(a,b){Q c,d,e;52(c 1U k)52(d 1U k[c])T(e=(1G 7m(d,"i")).4O(a))b.4e(e),k[c][d].23(u,b)}Q g=/^15\\.(1N|2b|2A|13|1t)|16|U|P\\.2O/i,h=/^U\\.(18|17)|16/i,i=e,j=e,k=u.2K,l;"1n"===11 b?(l=b,b={},b[l]=c):b=a.1m(d,{},b),a.1l(b,9(c,d){Q e=C(c.2p()),f;f=e[0][e[1]],e[0][e[1]]="1j"===11 d&&d.7n?a(d):d,b[c]=[e[0],e[1],d,f],i=g.1B(c)||i,j=h.1B(c)||j}),t(p),x=y=1,a.1l(b,m),x=y=0,z.1I(":1P")&&u.1g&&(i&&u.1X(p.15.13==="1D"?f:B.1c),j&&u.2E());N u},1W:9(b,c){9 l(){b?(a.29.3H&&z[0].16.3n("38"),z.Y("7o","")):z.Y({2D:"",47:"",V:"",5j:"",O:"",M:""})}T(!u.1g)T(b)u.1S(1);2G N u;Q d=b?"P":"R",g=p[d],h=z.1I(":1P"),j,k;(11 b).4Y("34|2F")&&(b=!h);T(h===b)N u;T(c){T(/7q|7r/.1B(c.1v)&&/48|2H/.1B(B.1c.1v)&&c.13===p.P.13[0]&&z.7t(c.3w).1a)N u;B.1c=a.1m({},c)}k=a.3b("1s"+d),k.3j=c?B.1c:f,z.2q(k,[u,3q]);T(k.3k())N u;a.17(z[0],"1J-49",!b),b?(B.3c=a.1m({},i),u.2n(c),a.1K(p.U.1o)&&J(),u.1X(c),g.32&&a(m,g.32).2v(z).1b("R",k)):(1E(u.1r.P),2w B.3c,u.1L(c)),z.56(0,1),a.1K(g.1H)?(g.1H.1O(z,u),z.3G("3R",9(a){l(),a()})):g.1H===e?(z[d](),l.1O(z)):z.57(3q,b?1:0,l),b&&g.13.2q("1b-"+q+"-1Z");N u},P:9(a){N u.1W(d,a)},R:9(a){N u.1W(e,a)},2n:9(b){T(!u.1g)N u;Q c=a(m),d=1y(z[0].16.2R,10),e=g.5h+c.1a,f=a.1m({},b),h,i;z.1M(n)||(i=a.3b("58"),i.3j=f,z.2q(i,[u,e]),i.3k()||(d!==e&&(c.1l(9(){S.16.2R>d&&(S.16.2R=S.16.2R-1)}),c.38("."+n).1b("1L",f)),z.3v(n)[0].16.2R=e));N u},1L:9(b){Q c=a.1m({},b),d;z.4k(n),d=a.3b("59"),d.3j=c,z.2q(d,[u]);N u},1X:9(c,d){T(!u.1g||x)N u;x=1;Q f=p.15.13,g=p.15,k=g.1N,l=g.2b,m=g.2A,n=m.4j.2B(" "),o=z.3m(),q=z.3a(),r=0,s=0,t=a.3b("5a"),w=z.Y("15")==="2j",y=g.28.1V?g.28:a(b),A={O:0,M:0},C=(u.1R.12||{}).1k,D={3I:n[0],3J:n[1]||n[0],12:p.16.12||{},O:9(a){Q b=D.3I==="2o",c=y.W.O+y.3l,d=k.x==="O"?o:k.x==="1h"?-o:-o/2,e=l.x==="O"?r:l.x==="1h"?-r:-r/2,f=D.12.V+D.12.1d*2||0,g=C&&C.1e==="x"&&!b?f:0,h=c-a-g,i=a+o-y.V-c+g,j=d-(k.1e==="x"||k.x===k.y?e:0),n=k.x==="1f";b?(g=C&&C.1e==="y"?f:0,j=(k.x==="O"?1:-1)*d-g,A.O+=h>0?h:i>0?-i:0,A.O=14.1F(y.W.O+(g&&C.x==="1f"?D.12.W:0),a-j,14.3K(14.1F(y.W.O+y.V,a+j),A.O))):(h>0&&(k.x!=="O"||i>0)?A.O-=j+(n?0:2*m.x):i>0&&(k.x!=="1h"||h>0)&&(A.O-=n?-j:j+2*m.x),A.O!==a&&n&&(A.O-=m.x),A.O<c&&-A.O>i&&(A.O=a));N A.O-a},M:9(a){Q b=D.3J==="2o",c=y.W.M+y.36,d=k.y==="M"?q:k.y==="1i"?-q:-q/2,e=l.y==="M"?s:l.y==="1i"?-s:-s/2,f=D.12.X+D.12.1d*2||0,g=C&&C.1e==="y"&&!b?f:0,h=c-a-g,i=a+q-y.X-c+g,j=d-(k.1e==="y"||k.x===k.y?e:0),n=k.y==="1f";b?(g=C&&C.1e==="x"?f:0,j=(k.y==="M"?1:-1)*d-g,A.M+=h>0?h:i>0?-i:0,A.M=14.1F(y.W.M+(g&&C.x==="1f"?D.12.W:0),a-j,14.3K(14.1F(y.W.M+y.X,a+j),A.M))):(h>0&&(k.y!=="M"||i>0)?A.M-=j+(n?0:2*m.y):i>0&&(k.y!=="1i"||h>0)&&(A.M-=n?-j:j+2*m.y),A.M!==a&&n&&(A.M-=m.y),A.M<0&&-A.M>i&&(A.M=a));N A.M-a}};T(f==="1D")l={x:"O",y:"M"},c=c&&(c.1v==="2e"||c.1v==="4a")?B.1c:!m.1D&&B.3c?B.3c:i&&(m.1D||!c||!c.2g)?{2g:i.2g,2u:i.2u}:c,A={M:c.2u,O:c.2g};2G{f==="1c"&&(c&&c.13&&c.1v!=="4a"&&c.1v!=="2e"?f=B.13=a(c.13):f=B.13),f=a(f).7v(0);T(f.1a===0)N u;f[0]===1C||f[0]===b?(r=f.V(),s=f.X(),f[0]===b&&(A={M:!w||h.2N?y.36():0,O:!w||h.2N?y.3l():0})):f.1I("7w")&&h.41?A=h.41(f,l):f[0].7x==="7y://7z.7A.7B/7C/3N"&&h.3N?A=h.3N(f,l):(r=f.3m(),s=f.3a(),A=h.W(f,g.1t,w)),A.W&&(r=A.V,s=A.X,A=A.W),A.O+=l.x==="1h"?r:l.x==="1f"?r/2:0,A.M+=l.y==="1i"?s:l.y==="1f"?s/2:0}A.O+=m.x+(k.x==="1h"?-o:k.x==="1f"?-o/2:0),A.M+=m.y+(k.y==="1i"?-q:k.y==="1f"?-q/2:0),y.1V&&f[0]!==b&&f[0]!==v&&D.3J+D.3I!=="7E"?(y={5g:y,X:y[(y[0]===b?"h":"7F")+"7G"](),V:y[(y[0]===b?"w":"7H")+"7I"](),3l:y.3l(),36:y.36(),W:y.W()||{O:0,M:0}},A.3F={O:D.3I!=="3L"?D.O(A.O):0,M:D.3J!=="3L"?D.M(A.M):0}):A.3F={O:0,M:0},z.17("1Y",9(b,c){N a.17(S,"1Y").24(/1u-1s-5d-\\w+/i,"")}).3v(j+"-5d-"+k.4W()),t.3j=a.1m({},c),z.2q(t,[u,A,y.5g||y]);T(t.3k())N u;2w A.3F,d===e||5i(A.O)||5i(A.M)||!a.1K(g.1H)?z.Y(A):a.1K(g.1H)&&(g.1H.1O(z,u,a.1m({},A)),z.3G(9(b){a(S).Y({5j:"",X:""}),a.29.3H&&S.16.3n("38"),b()})),x=0;N u},2E:9(){T(u.1g<1||p.16.V||y)N u;Q b=j+"-5l",c=p.15.1t,d,e,f,g;y=1,z.Y("V","").3v(b),e=z.V()+(a.29.5m?1:0),f=z.Y("1F-V")||"",g=z.Y("3K-V")||"",d=(f+g).2C("%")>-1?c.V()/5p:0,f=(f.2C("%")>-1?d:1)*1y(f,10)||e,g=(g.2C("%")>-1?d:1)*1y(g,10)||0,e=f+g?14.3K(14.1F(e,g),f):e,z.Y("V",14.3M(e)).4k(b),y=0;N u},3Q:9(b){Q c=l;"34"!==11 b&&(b=!z.1M(c)&&!B.2z),u.1g?(z.2a(c,b),a.17(z[0],"1J-2z",b)):B.2z=!!b;N u},5q:9(){N u.3Q(e)},2l:9(){Q b=c[0],d=a.17(b,r);u.1g&&(z.1Q(),a.1l(u.1R,9(){S.2l&&S.2l()})),1E(u.1r.P),1E(u.1r.R),L(1,1,1,1),a.4l(b,"1b"),d&&(a.17(b,"18",d),c.3s(r)),c.3s("1J-3O").1q(".1b");N c}})}9 t(b){Q c;T(!b||"1j"!==11 b)N e;"1j"!==11 b.1T&&(b.1T={1v:b.1T});T("U"1U b){T("1j"!==11 b.U||b.U.1V)b.U={1o:b.U};c=b.U.1o||e,!a.1K(c)&&(!c&&!c.17||c.1a<1||"1j"===11 c&&!c.1V)&&(b.U.1o=e),"18"1U b.U&&("1j"!==11 b.U.18&&(b.U.18={1o:b.U.18}),c=b.U.18.1o||e,!a.1K(c)&&(!c&&!c.17||c.1a<1||"1j"===11 c&&!c.1V)&&(b.U.18.1o=e))}"15"1U b&&("1j"!==11 b.15&&(b.15={1N:b.15,2b:b.15})),"P"1U b&&("1j"!==11 b.P&&(b.P.1V?b.P={13:b.P}:b.P={1c:b.P})),"R"1U b&&("1j"!==11 b.R&&(b.R.1V?b.R={13:b.R}:b.R={1c:b.R})),"16"1U b&&("1j"!==11 b.16&&(b.16={3h:b.16})),a.1l(h,9(){S.2W&&S.2W(b)});N b}9 s(){Q c=b.5t;N c&&(c.5b||c.5x||a.4n).23(c,22)}Q d=!0,e=!1,f=5z,g,h,i,j="1u-1s",k="1u-2f",l="1u-3g-2z",m="2i.1b."+j,n=j+"-2n",o=j+"-40",p="-5C",q="5D",r="4X";g=a.2m.1b=9(b,h,i){Q j=(""+b).2p(),k=f,l=j==="3Q"?[d]:a.5G(22).4H(1,10),m=l[l.1a-1],n=S[0]?a.2s(S[0],"1b"):f;T(!22.1a&&n||j==="5I")N n;T("1n"===11 b){S.1l(9(){Q b=a.2s(S,"1b");T(!b)N d;m&&m.5J&&(b.2Z.1c=m);T(j!=="5M"&&j!=="26"||!h)b[j]&&b[j].23(b[j],l);2G T(a.5N(h)||i!==c)b.2Y(h,i);2G{k=b.4s(h);N e}});N k!==f?k:S}T("1j"===11 b||!22.1a){n=t(a.1m(d,{},b));N g.19.1O(S,n,m)}},g.19=9(b,c){N S.1l(9(f){9 p(b){9 c(){o.1S(11 b==="1j"||i.P.2O),k.P.1q(l.P),k.R.1q(l.R)}T(o.2Z.2z)N e;o.2Z.1c=a.1m({},b),i.P.21>0?(1E(o.1r.P),o.1r.P=2V(c,i.P.21),l.P!==l.R&&k.R.19(l.R,9(){1E(o.1r.P)})):c()}Q i,k,l,m=!b.1p||b.1p===e||b.1p.1a<1||a("#"+j+"-"+b.1p).1a?g.4d++:b.1p,n=".1b-"+m+"-2h",o=v.1O(S,m,b);T(o===e)N d;i=o.26,a.1l(h,9(){S.2L==="2L"&&S(o)}),k={P:i.P.13,R:i.R.13},l={P:a.3B(""+i.P.1c).24(/ /g,n+" ")+n,R:a.3B(""+i.R.1c).24(/ /g,n+" ")+n},i.R.1c==="3T"&&(l.R="2Q"+n),k.P.19(l.P,p),(i.P.2O||i.5k)&&p(c)})},h=g.1R={2t:9(a){a=(""+a).24(/([A-Z])/," $1").24(/69/55,"1f").2p(),S.x=(a.3V(/O|1h/i)||a.3V(/1f/)||["3y"])[0].2p(),S.y=(a.3V(/M|1i|1f/i)||["3y"])[0].2p(),S.1e=a.3t(0).4Y(/^(t|b)/)>-1?"y":"x",S.1n=9(){N S.1e==="y"?S.y+S.x:S.x+S.y},S.4W=9(){Q a=S.x.2x(0,1),b=S.y.2x(0,1);N a===b?a:a==="c"||a!=="c"&&b!=="c"?b+a:a+b}},W:9(c,d,e){9 l(a,b){f.O+=b*a.3l(),f.M+=b*a.36()}Q f=c.W(),g=d,i=0,j=1C.30,k;T(g){6p{T(g[0]===j)2I;g.Y("15")!=="6r"&&(k=g.15(),f.O-=k.O+(1y(g.Y("6u"),10)||0),f.M-=k.M+(1y(g.Y("6x"),10)||0),i++)}3d(g=g.6z());(d[0]!==j||i>1)&&l(d,1),(h.2N<4.1&&h.2N>3.1||!h.2N&&e)&&l(a(b),-1)}N f},2N:4N((""+(/4S.*6E ([0-6F]{1,3})|(4S 6I).*6M.*6P/i.4O(6U.6X)||[0,""])[1]).24("4m","72").24("75","."))||e,2m:{17:9(b,c){T(S.1a){Q d=S[0],e="18",f=a.2s(d,"1b");T(b===e){T(22.1a<2)N a.17(d,r);T(11 f==="1j"){f&&f.1g&&f.26.U.17===e&&f.2Z.17&&f.2Y("U.1o",c),a.2m["17"+q].23(S,22),a.17(d,r,a.17(d,e));N S.3s(e)}}}},4V:9(b){Q c=a([]),d="18",e;e=a.2m["4V"+q].23(S,22).38("[4X]").1l(9(){a.17(S,d,a.17(S,r)),S.3n(r)}).7l();N e},1Q:a.1u?f:9(b,c){a(S).1l(9(){c||(!b||a.38(b,[S]).1a)&&a("*",S).2P(S).1l(9(){a(S).7p("1Q")})})}}},a.1l(h.2m,9(b,c){T(!c)N d;Q e=a.2m[b+q]=a.2m[b];a.2m[b]=9(){N c.23(S,22)||e.23(S,22)}}),a(1C).19("3i.1b",9(a){i={2g:a.2g,2u:a.2u,1v:"3i"}}),g.4c="7D",g.4d=0,g.5c="4g 7J 3D 5e 3i 2Q 2y".2B(" "),g.5h=7K,g.35={5k:e,1p:e,4h:d,U:{1o:d,17:"18",18:{1o:e,1A:e}},15:{1N:"M O",2b:"1i 1h",13:e,1t:e,28:e,2A:{x:0,y:0,1D:d,2e:d,4j:"3A 3A"},1H:d},P:{13:e,1c:"2y",1H:d,21:3q,32:e,2O:e},R:{13:e,1c:"2Q",1H:d,21:0,2j:e,1Z:e,2H:"3E",3S:e},16:{3h:"",2f:e,V:e},4f:{1S:f,4b:f,P:f,R:f,1W:f,2n:f,1L:f}},h.1z=9(a){Q b=a.1R.1z;N"1j"===11 b?b:a.1R.1z=1G w(a)},h.1z.2L="1S",h.1z.2W=9(a){Q b=a.U,c;b&&"1z"1U b&&(c=b.1z,11 c!=="1j"&&(c=a.U.1z={2k:c}),"34"!==11 c.2c&&c.2c&&(c.2c=!!c.2c))},a.1m(d,g.35,{U:{1z:{4J:d,2c:d}}}),h.41=9(b,c){9 l(a,b){Q d=0,e=1,f=1,g=0,h=0,i=a.V,j=a.X;3d(i>0&&j>0&&e>0&&f>0){i=14.3o(i/2),j=14.3o(j/2),c.x==="O"?e=i:c.x==="1h"?e=a.V-i:e+=14.3o(i/2),c.y==="M"?f=j:c.y==="1i"?f=a.X-j:f+=14.3o(j/2),d=b.1a;3d(d--){T(b.1a<2)2I;g=b[d][0]-a.W.O,h=b[d][1]-a.W.M,(c.x==="O"&&g>=e||c.x==="1h"&&g<=e||c.x==="1f"&&(g<e||g>a.V-e)||c.y==="M"&&h>=f||c.y==="1i"&&h<=f||c.y==="1f"&&(h<f||h>a.X-f))&&b.6R(d,1)}}N{O:b[0][0],M:b[0][1]}}Q d=b.17("42").2p(),e=b.17("7a").2B(","),f=[],g=a(\'3r[7h="#\'+b.7i("5f").17("46")+\'"]\'),h=g.W(),i={V:0,X:0,W:{M:53,1h:0,1i:0,O:53}},j=0,k=0;h.O+=14.3x((g.3m()-g.V())/2),h.M+=14.3x((g.3a()-g.X())/2);T(d==="4o"){j=e.1a;3d(j--)k=[1y(e[--j],10),1y(e[j+1],10)],k[0]>i.W.1h&&(i.W.1h=k[0]),k[0]<i.W.O&&(i.W.O=k[0]),k[1]>i.W.1i&&(i.W.1i=k[1]),k[1]<i.W.M&&(i.W.M=k[1]),f.4e(k)}2G f=a.5f(e,9(a){N 1y(a,10)});5n(d){39"7N":i={V:14.2U(f[2]-f[0]),X:14.2U(f[3]-f[1]),W:{O:f[0],M:f[1]}};2I;39"5r":i={V:f[2]+2,X:f[2]+2,W:{O:f[0],M:f[1]}};2I;39"4o":a.1m(i,{V:14.2U(i.W.1h-i.W.O),X:14.2U(i.W.1i-i.W.M)}),c.1n()==="4v"?i.W={O:i.W.O+i.V/2,M:i.W.M+i.X/2}:i.W=l(i,f.4H()),i.V=i.X=0}i.W.O+=h.O,i.W.M+=h.M;N i},h.12=9(a){Q b=a.1R.12;N"1j"===11 b?b:a.1R.12=1G y(a)},h.12.2L="1S",h.12.2W=9(a){Q b=a.16,c;b&&"12"1U b&&(c=a.16.12,11 c!=="1j"&&(a.16.12={1k:c}),/1n|34/i.1B(11 c.1k)||(c.1k=d),11 c.V!=="2F"&&2w c.V,11 c.X!=="2F"&&2w c.X,11 c.1d!=="2F"&&c.1d!==d&&2w c.1d,11 c.W!=="2F"&&2w c.W)},a.1m(d,g.35,{16:{12:{1k:d,3C:e,V:6,X:6,1d:d,W:0}}}),h.1x=9(a){Q b=a.1R.1x;N"1j"===11 b?b:a.1R.1x=1G z(a)},h.1x.2L="1S",h.1x.2W=9(a){a.P&&(11 a.P.1x!=="1j"?a.P.1x={2T:!!a.P.1x}:11 a.P.1x.2T==="4m"&&(a.P.1x.2T=d))},a.1m(d,g.35,{P:{1x:{2T:e,1H:d,1L:d,5o:d}}})}(7O,3E)',62,486,'|||||||||function|||||||||||||||||||||||||||||||||||||||top|return|left|show|var|hide|this|if|content|width|offset|height|css|||typeof|tip|target|Math|position|style|attr|title|bind|length|qtip|event|border|precedance|center|rendered|right|bottom|object|corner|each|extend|string|text|id|unbind|timers|tooltip|container|ui|type|titlebar|modal|parseInt|ajax|button|test|document|mouse|clearTimeout|max|new|effect|is|aria|isFunction|blur|hasClass|my|call|visible|remove|plugins|render|metadata|in|jquery|toggle|reposition|class|inactive||delay|arguments|apply|replace|init|options||viewport|browser|toggleClass|at|once||resize|widget|pageX|create|div|fixed|url|destroy|fn|focus|shift|toLowerCase|trigger|overlay|data|Corner|pageY|not|delete|substr|mouseenter|disabled|adjust|split|indexOf|display|redraw|number|else|leave|break|fill|checks|initialize|html|iOS|ready|add|mouseleave|zIndex|margin|on|abs|setTimeout|sanitize|appendTo|set|cache|body|elements|solo|block|boolean|defaults|scrollTop|append|filter|case|outerHeight|Event|origin|while|color|update|state|classes|mousemove|originalEvent|isDefaultPrevented|scrollLeft|outerWidth|removeAttribute|floor|icon|90|img|removeAttr|charAt|default|addClass|relatedTarget|ceil|inherit|transparent|flip|trim|mimic|mousedown|window|adjusted|queue|msie|horizontal|vertical|min|none|round|svg|describedby|getContext|disable|fx|distance|unfocus|px|match|atomic|load|user|doc|hover|imagemap|shape|script|sqrt|tooltipshow|name|visibility|out|hidden|scroll|move|version|nextid|push|events|click|overwrite|vml|method|removeClass|removeData|undefined|noop|poly|radius|detectCorner|lineTo|get|save|3e3|centercenter|Number|detectColours|stroke|miter|behavior|VML|canvas|helper|bottomleft|topright|topleft|slice|absolute|loading|find|empty|webkit|parseFloat|exec|keydown|mouseout|header|CPU|reset|role|clone|abbreviation|oldtitle|search|bottomright||tooltiphide|for|1e10|inline|gi|stop|fadeTo|tooltipfocus|tooltipblur|tooltipmove|error|inactiveEvents|pos|mouseup|map|elem|zindex|isNaN|opacity|prerender|fluid|mozilla|switch|escape|100|enable|circle|lineWidth|console|strict|qtipmodal|keyCode|log|animated|null|pow|moz|31000px|_replacedByqTip|rgba|background|makeArray|coordorigin|api|timeStamp|solid|dashed|option|isPlainObject|123456|restore|clearRect|translate|beginPath|moveTo|closePath|fillStyle|strokeStyle|lineJoin|miterLimit|xe|antialias|coordsize|fillcolor|filled|stroked|weight|miterlimit|1000|joinstyle|middle|children|reverse|prependTo|bottomcenter|rightcenter|leftcenter|lefttop|righttop|leftbottom|rightbottom|one|success|context|html5|qtipopts|do|Unable|static|to|parse|borderLeftWidth|HTML5|attribute|borderTopWidth|stopPropagation|offsetParent|mouseover|inArray|special|frame|OS|9_|insertBefore|backgroundColor|like|Close|label|prepend|AppleWebKit|span|close|Mobile|times|splice|parents|keyup|navigator|active|preventDefault|userAgent|closest|grep|pushStack|down|3_2|Color|pop|_|catch|Function|try|builtin|coords|unshift|un|tooltiprender|alert|live|polite|usemap|parent|pointer|dimensions|end|RegExp|nodeType|overflow|triggerHandler|over|enter|topcenter|has|last|eq|area|namespaceURI|http|www|w3|org|2000|nightly|nonenone|outerH|eight|outerW|idth|dblclick|15e3|use|path|rect|jQuery|cursor'.split('|'),0,{}))
-
+// qTip2 growl
+createGrowl=function(b,d,a){var c=$(".qtip.jgrowl:visible:last");$(document.body).qtip({content:{text:b,title:{text:d,button:true}},position:{my:"top right",at:(c.length?"bottom":"top")+" right",target:c.length?c:$(document.body),adjust:{y:5+(c.length?0:$(window).scrollTop()),x:-(c.length==0)*5}},show:{event:false,ready:true,effect:function(){$(this).stop(0,1).fadeIn(400)},persistent:a===true},hide:{event:false,effect:function(e){$(this).stop(0,1).fadeOut(400).queue(function(){e.destroy();updateGrowls()})}},style:{classes:"jgrowl ui-tooltip-dark ui-tooltip-rounded",tip:false},events:{render:function(f,e){timer.call(e.elements.tooltip,f)},}}).removeData("qtip")};updateGrowls=function(){var a=$(".qtip.jgrowl:not(:animated)");a.each(function(b){var c=$(this).data("qtip");beScript.log(b);c.options.position.target=(b==0)?$(document.body):a.eq(b-1);c.set("position.at",((b==0)?"top":"bottom")+" right");if(b==0){$(this).css("top","5px");c.set("position.adjust.x",-5);c.set("position.adjust.y",5+$(window).scrollTop())}})};function timer(b){var a=$(this).data("qtip"),c=5000;if(a.get("show.persistent")===true){return}clearTimeout(a.timer);if(b.type!=="mouseover"){a.timer=setTimeout(a.hide,c)}}$(document).delegate(".qtip.jgrowl","mouseover mouseout",timer);
 // qTip 2 styles
 GM_addStyle( '.ui-tooltip-fluid{display:block;visibility:hidden;position:static!important;float:left!important;}.ui-tooltip,.qtip{position:absolute;left:-28000px;top:-28000px;display:none;max-width:280px;min-width:50px;font-size:10.5px;line-height:12px;}.ui-tooltip-content{position:relative;padding:5px 9px;overflow:hidden;border-width:1px;border-style:solid;text-align:left;word-wrap:break-word;overflow:hidden;}.ui-tooltip-titlebar{position:relative;min-height:14px;padding:5px 35px 5px 10px;overflow:hidden;border-width:1px 1px 0;border-style:solid;font-weight:bold;}.ui-tooltip-titlebar+.ui-tooltip-content{border-top-width:0!important;}/*!Default close button class */ .ui-tooltip-titlebar .ui-state-default{position:absolute;right:4px;top:50%;margin-top:-9px;cursor:pointer;outline:medium none;border-width:1px;border-style:solid;}* html .ui-tooltip-titlebar .ui-state-default{top:16px;}.ui-tooltip-titlebar .ui-icon,.ui-tooltip-icon .ui-icon{display:block;text-indent:-1000em;}.ui-tooltip-icon,.ui-tooltip-icon .ui-icon{-moz-border-radius:3px;-webkit-border-radius:3px;border-radius:3px;}.ui-tooltip-icon .ui-icon{width:18px;height:14px;text-align:center;text-indent:0;font:normal bold 10px/13px Tahoma,sans-serif;color:inherit;background:transparent none no-repeat -100em -100em;}/*!Default tooltip style */ .ui-tooltip-titlebar,.ui-tooltip-content{border-color:#F1D031;background-color:#FFFFA3;color:#555;}.ui-tooltip-titlebar{background-color:#FFEF93;}.ui-tooltip-titlebar .ui-tooltip-icon{border-color:#CCC;background:#F1F1F1;color:#777;}.ui-tooltip-titlebar .ui-state-hover{border-color:#AAA;color:#111;}/*!Light tooltip style */ .ui-tooltip-light .ui-tooltip-titlebar,.ui-tooltip-light .ui-tooltip-content{border-color:#E2E2E2;color:#454545;}.ui-tooltip-light .ui-tooltip-content{background-color:white;}.ui-tooltip-light .ui-tooltip-titlebar{background-color:#f1f1f1;}/*!Dark tooltip style */ .ui-tooltip-dark .ui-tooltip-titlebar,.ui-tooltip-dark .ui-tooltip-content{border-color:#303030;color:#f3f3f3;}.ui-tooltip-dark .ui-tooltip-content{background-color:#505050;}.ui-tooltip-dark .ui-tooltip-titlebar{background-color:#404040;}.ui-tooltip-dark .ui-tooltip-icon{border-color:#444;}.ui-tooltip-dark .ui-tooltip-titlebar .ui-state-hover{border-color:#303030;}/*!Cream tooltip style */ .ui-tooltip-cream .ui-tooltip-titlebar,.ui-tooltip-cream .ui-tooltip-content{border-color:#F9E98E;color:#A27D35;}.ui-tooltip-cream .ui-tooltip-content{background-color:#FBF7AA;}.ui-tooltip-cream .ui-tooltip-titlebar{background-color:#F0DE7D;}.ui-tooltip-cream .ui-state-default .ui-tooltip-icon{background-position:-82px 0;}/*!Red tooltip style */ .ui-tooltip-red .ui-tooltip-titlebar,.ui-tooltip-red .ui-tooltip-content{border-color:#D95252;color:#912323;}.ui-tooltip-red .ui-tooltip-content{background-color:#F78B83;}.ui-tooltip-red .ui-tooltip-titlebar{background-color:#F06D65;}.ui-tooltip-red .ui-state-default .ui-tooltip-icon{background-position:-102px 0;}.ui-tooltip-red .ui-tooltip-icon{border-color:#D95252;}.ui-tooltip-red .ui-tooltip-titlebar .ui-state-hover{border-color:#D95252;}/*!Green tooltip style */ .ui-tooltip-green .ui-tooltip-titlebar,.ui-tooltip-green .ui-tooltip-content{border-color:#90D93F;color:#3F6219;}.ui-tooltip-green .ui-tooltip-content{background-color:#CAED9E;}.ui-tooltip-green .ui-tooltip-titlebar{background-color:#B0DE78;}.ui-tooltip-green .ui-state-default .ui-tooltip-icon{background-position:-42px 0;}/*!Blue tooltip style */ .ui-tooltip-blue .ui-tooltip-titlebar,.ui-tooltip-blue .ui-tooltip-content{border-color:#ADD9ED;color:#5E99BD;}.ui-tooltip-blue .ui-tooltip-content{background-color:#E5F6FE;}.ui-tooltip-blue .ui-tooltip-titlebar{background-color:#D0E9F5;}.ui-tooltip-blue .ui-state-default .ui-tooltip-icon{background-position:-2px 0;}.ui-tooltip .ui-tooltip-tip{margin:0 auto;overflow:hidden;background:transparent!important;border:0 dashed transparent!important;z-index:10;}.ui-tooltip .ui-tooltip-tip,.ui-tooltip .ui-tooltip-tip *{position:absolute;line-height:.1px!important;font-size:.1px!important;color:#123456;background:transparent;border:0 dashed transparent;}.ui-tooltip .ui-tooltip-tip canvas{position:static;}#qtip-overlay{position:absolute;left:-10000em;top:-10000em;background-color:black;opacity:.7;filter:alpha(opacity=70);-ms-filter:"progid:DXImageTransform.Microsoft.Alpha(Opacity=70)";}/*!Add shadows to your tooltips in:FF3+,Chrome 2+,Opera 10.6+,IE6+,Safari 2+*/ .ui-tooltip-shadow{-webkit-box-shadow:1px 1px 3px 1px rgba(0,0,0,0.15);-moz-box-shadow:1px 1px 3px 1px rgba(0,0,0,0.15);box-shadow:1px 1px 3px 1px rgba(0,0,0,0.15);}.ui-tooltip-shadow .ui-tooltip-titlebar,.ui-tooltip-shadow .ui-tooltip-content{filter:progid:DXImageTransform.Microsoft.Shadow(Color="gray",Direction=135,Strength=3);-ms-filter:"progid:DXImageTransform.Microsoft.Shadow(Color="gray",Direction=135,Strength=3)";_margin-bottom:-3px;.margin-bottom:-3px;}/*!Add rounded corners to your tooltips in:FF3+,Chrome 2+,Opera 10.6+,IE9+,Safari 2+*/ .ui-tooltip-rounded,.ui-tooltip-rounded .ui-tooltip-content,.ui-tooltip-tipsy,.ui-tooltip-tipsy .ui-tooltip-content,.ui-tooltip-youtube,.ui-tooltip-youtube .ui-tooltip-content{-moz-border-radius:4px;-webkit-border-radius:4px;border-radius:4px;}.ui-tooltip-rounded .ui-tooltip-titlebar,.ui-tooltip-tipsy .ui-tooltip-titlebar,.ui-tooltip-youtube .ui-tooltip-titlebar{-moz-border-radius:5px 5px 0 0;-webkit-border-radius:5px 5px 0 0;border-radius:5px 5px 0 0;}.ui-tooltip-rounded .ui-tooltip-titlebar+.ui-tooltip-content,.ui-tooltip-tipsy .ui-tooltip-titlebar+.ui-tooltip-content,.ui-tooltip-youtube .ui-tooltip-titlebar+.ui-tooltip-content{-moz-border-radius:0 0 5px 5px;-webkit-border-radius:0 0 5px 5px;border-radius:0 0 5px 5px;}/*!Youtube tooltip style */ .ui-tooltip-youtube{-webkit-box-shadow:0 0 3px #333;-moz-box-shadow:0 0 3px #333;box-shadow:0 0 3px #333;}.ui-tooltip-youtube .ui-tooltip-titlebar,.ui-tooltip-youtube .ui-tooltip-content{background:transparent;background:rgba(0,0,0,0.85);filter:progid:DXImageTransform.Microsoft.gradient(startColorstr=#D9000000,endColorstr=#D9000000);-ms-filter:"progid:DXImageTransform.Microsoft.gradient(startColorstr=#D9000000,endColorstr=#D9000000)";color:white;border-color:#CCC;}.ui-tooltip-youtube .ui-tooltip-icon{border-color:#222;}.ui-tooltip-youtube .ui-tooltip-titlebar .ui-state-hover{border-color:#303030;}.ui-tooltip-jtools{background:#232323;background:rgba(0,0,0,0.7);background-image:-moz-linear-gradient(top,#717171,#232323);background-image:-webkit-gradient(linear,left top,left bottom,from(#717171),to(#232323));border:2px solid #ddd;border:2px solid rgba(241,241,241,1);-moz-border-radius:2px;-webkit-border-radius:2px;border-radius:2px;-webkit-box-shadow:0 0 12px #333;-moz-box-shadow:0 0 12px #333;box-shadow:0 0 12px #333;}.ui-tooltip-jtools .ui-tooltip-titlebar{filter:progid:DXImageTransform.Microsoft.gradient(startColorstr=#717171,endColorstr=#4A4A4A);-ms-filter:"progid:DXImageTransform.Microsoft.gradient(startColorstr=#717171,endColorstr=#4A4A4A)";}.ui-tooltip-jtools .ui-tooltip-content{filter:progid:DXImageTransform.Microsoft.gradient(startColorstr=#4A4A4A,endColorstr=#232323);-ms-filter:"progid:DXImageTransform.Microsoft.gradient(startColorstr=#4A4A4A,endColorstr=#232323)";}.ui-tooltip-jtools .ui-tooltip-titlebar,.ui-tooltip-jtools .ui-tooltip-content{background:transparent;color:white;border:0 dashed transparent;}.ui-tooltip-jtools .ui-tooltip-icon{border-color:#555;}.ui-tooltip-jtools .ui-tooltip-titlebar .ui-state-hover{border-color:#333;}.ui-tooltip-cluetip{-webkit-box-shadow:4px 4px 5px rgba(0,0,0,0.4);-moz-box-shadow:4px 4px 5px rgba(0,0,0,0.4);box-shadow:4px 4px 5px rgba(0,0,0,0.4);}.ui-tooltip-cluetip .ui-tooltip-titlebar{background-color:#87876A;color:white;border:0 dashed transparent;}.ui-tooltip-cluetip .ui-tooltip-content{background-color:#D9D9C2;color:#111;border:0 dashed transparent;}.ui-tooltip-cluetip .ui-tooltip-icon{border-color:#808064;}.ui-tooltip-cluetip .ui-tooltip-titlebar .ui-state-hover{border-color:#696952;color:#696952;}.ui-tooltip-tipsy{border:0;}.ui-tooltip-tipsy .ui-tooltip-titlebar,.ui-tooltip-tipsy .ui-tooltip-content{background:transparent;background:rgba(0,0,0,.87);filter:progid:DXImageTransform.Microsoft.gradient(startColorstr=#D9000000,endColorstr=#D9000000);-ms-filter:"progid:DXImageTransform.Microsoft.gradient(startColorstr=#D9000000,endColorstr=#D9000000)";color:white;border:0 transparent;font-size:11px;font-family:"Lucida Grande",sans-serif;font-weight:bold;line-height:16px;text-shadow:0 1px black;}.ui-tooltip-tipsy .ui-tooltip-titlebar{padding:6px 35px 0 10;}.ui-tooltip-tipsy .ui-tooltip-content{padding:6px 10;}.ui-tooltip-tipsy .ui-tooltip-icon{border-color:#222;text-shadow:none;}.ui-tooltip-tipsy .ui-tooltip-titlebar .ui-state-hover{border-color:#303030;}.ui-tooltip-tipped .ui-tooltip-titlebar,.ui-tooltip-tipped .ui-tooltip-content{border:3px solid #959FA9;}.ui-tooltip-tipped .ui-tooltip-titlebar{background:#3A79B8;background-image:-moz-linear-gradient(top,#3A79B8,#2E629D);background-image:-webkit-gradient(linear,left top,left bottom,from(#3A79B8),to(#2E629D));filter:progid:DXImageTransform.Microsoft.gradient(startColorstr=#3A79B8,endColorstr=#2E629D);-ms-filter:"progid:DXImageTransform.Microsoft.gradient(startColorstr=#3A79B8,endColorstr=#2E629D)";color:white;font-weight:normal;font-family:serif;border-bottom-width:0;-moz-border-radius:3px 3px 0 0;-webkit-border-radius:3px 3px 0 0;border-radius:3px 3px 0 0;}.ui-tooltip-tipped .ui-tooltip-content{background-color:#F9F9F9;color:#454545;-moz-border-radius:0 0 3px 3px;-webkit-border-radius:0 0 3px 3px;border-radius:0 0 3px 3px;}.ui-tooltip-tipped .ui-tooltip-icon{border:2px solid #285589;background:#285589;}.ui-tooltip-tipped .ui-tooltip-icon .ui-icon{background-color:#FBFBFB;color:#555;}' );
+GM_addStyle( '.jgrowl{position:fixed;top:5px;}' );
 
 // jQuery crossdomain xml http request
 jQuery.ajax=(function(_ajax){var protocol=location.protocol,hostname=location.hostname,exRegex=RegExp(protocol+'//'+hostname),YQL='http'+(/^https/.test(protocol)?'s':'')+'://query.yahooapis.com/v1/public/yql?callback=?',query='select * from html where url="{URL}" and xpath="*"';function isExternal(url){return!exRegex.test(url)&&/:\/\//.test(url)}return function(o){var url=o.url;if(/get/i.test(o.type)&&!/json/i.test(o.dataType)&&isExternal(url)){o.url=YQL;o.dataType='json';o.data={q:query.replace('{URL}',url+(o.data?(/\?/.test(url)?'&':'?')+jQuery.param(o.data):'')),format:'xml'};if(!o.success&&o.complete){o.success=o.complete;delete o.complete}o.success=(function(_success){return function(data){if(_success){_success.call(this,{responseText:data.results[0].replace(/<script[^>]+?\/>|<script(.|\s)*?\/script>/gi,'')},'success')}}})(o.success)}return _ajax.apply(this,arguments)}})(jQuery.ajax);
@@ -2198,6 +2593,9 @@ jQuery.ajax=(function(_ajax){var protocol=location.protocol,hostname=location.ho
 
 // jQuery plugin - float number: http://plugins.jquery.com/project/floatnumber
 (function(a){a.fn.floatnumber=function(c,b){return this.each(function(){var d=a(this);var e=false;function f(){var g=new RegExp(",","g");s=d.val();s=s.replace(g,".");if(s==""){s="0"}if(!isNaN(s)){n=parseFloat(s);s=n.toFixed(b);re2=new RegExp("\\.","g");s=s.replace(re2,c);d.val(s)}}d.bind("blur",f)})}})(jQuery);
+
+// for 'in' operator
+function oc(a){var o={};for(var i=0;i<a.length;i++)o[a[i]]='';return o;}
 
 // ------------------------
 // -      Start point     -
