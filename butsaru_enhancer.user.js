@@ -674,6 +674,12 @@ var beScript = {
     addBeScriptMenu : function() {
         if ( $("#beScript_menu").length == 0 ) {
             var greetingTd = $(".autoten");
+
+            if ( window.navigator.vendor && window.navigator.vendor.match(/Google/) ) {
+                beScript.log( "!!!!" );
+                greetingTd.attr( "valign", "center" );
+            }
+            
             greetingTd.attr( "width", "800" );
             greetingTd.before( "<td width='160' id='beScript_td'/>" );
             var beScript_td = $( "#beScript_td" );
