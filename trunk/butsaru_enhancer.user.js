@@ -2860,8 +2860,12 @@ beScript.train = {
         }
         
         if ( beScript.settings.individual_plan !== false && beScript.hrefAction in oc(["report", ""])) {
-            beScript.train.addIndividualPlanLinks( trainTable );
-            beScript.train.processIndividualPlan( trainTable.eq(0) );
+            var tmp = function() {
+                beScript.train.addIndividualPlanLinks( trainTable );
+                beScript.train.processIndividualPlan( trainTable.eq(0) );
+            };
+            
+            GM_wait( 'beScript.teams[beScript.activeTeamId].players.status == 15', tmp, beScript );
         }
     }
 };
