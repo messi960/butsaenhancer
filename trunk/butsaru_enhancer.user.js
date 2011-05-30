@@ -2662,8 +2662,12 @@ beScript.train = {
             
             var playerId = parseInt(beScript.Util.checkByRegExp( tds.eq(1).find("a").attr( "href" ), /(\d+)/ )[1]);
             var player = beScript.teams[beScript.activeTeamId].players[playerId];
+            if (!player) {
+                beScript.log( "Error! Cannot find player " + playerId + " in team " + beScript.teams[beScript.activeTeamId].name );
+                return;
+            } 
             
-            tds.eq(8).css( "width", "175    px" );
+            tds.eq(8).css( "width", "175px" );
             var img = $("<img style='align:right; vertical-align:bottom;' src='" + settingsIcon + "'>");
             
             var plan;
@@ -2861,8 +2865,12 @@ beScript.train = {
         }
         
         if ( beScript.settings.individual_plan !== false && beScript.hrefAction in oc(["report", "select", ""])) {
-            beScript.train.addIndividualPlanLinks( trainTable );
-            beScript.train.processIndividualPlan( trainTable.eq(0) );
+            var tmp = function() {
+                beScript.train.addIndividualPlanLinks( trainTable );
+                beScript.train.processIndividualPlan( trainTable.eq(0) );
+            }
+            
+            GM_wait( 'beScript.teams[beScript.activeTeamId].players.status == 15', tmp, beScript );
         }
     }
 };
