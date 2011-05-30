@@ -2763,6 +2763,7 @@ beScript.train = {
 
             });    
             
+	    tds.eq(8).children().first().wrap("<div style='float:left;'></div>");
             tds.eq(8).append( img );
             img.wrap("<div style='float:right;'></div>");
         });        
