@@ -138,7 +138,7 @@ var beScript = {
         text : "<span>Кратенько о том, что происходит со скриптом.<br/><br/>Как многие могли уже заметить, обновления стали происзодить намного реже - если в первую неделю существования скрипта он обновлялся ежедневно (а иногда и по несколько раз на дню), то сейчас обновления выходят раз в два-три дня. На самом деле, это хорошая новость. Это означает, что мелкие дополнения и баги исправлены и сейчас добавляется что-то более-менее существенное, что требует несколько больше времени, чем просто поправить две строчки. Это первое.<br /><br />Второе. Хотелось бы обратить внимание на то, что теперь существует <a href='http://bescript.reformal.ru/'>форма обратной связи</a>. Если Вы придумали что-то новое, что позволит улучшить скрипт - не стесняйтесь, пишите туда. Там же можно обсуждать и голосовать за чужие идеи - все это крайне приветствуется и ценится Вашим покорным слугой ;).<br /><br />Если же Вы обнаружили ошибку, большая просьба, добавить ее <a href='http://code.google.com/p/butsaenhancer/issues/list'>сюда</a>. Прошу обратить особое внимание на эти две ссылки (они, кстати, продублированы в <a href='http://forum.butsa.ru/index.php?showtopic=233323'>официальном топике скрипта</a> на форуме бутсы). Дело в том, что очень трудно на форуме отследить и запомнить все идеи/ошибки, а на этих сайтах все всегда будет на месте и ничего не потеряется. Спасибо!</span>"
     },
     
-	VERSION : "0.1.9",
+	VERSION : "0.1.10",
     NAMESPACE : "butsa_enhancer",
     UPDATES_CHECK_FREQ : 15, //minutes
     TEAM_UPDATES_CHECK_FREQ : 60 * 24, // minutes; recommended value is 60 * 24 = 1440 = 1 day.
@@ -724,27 +724,46 @@ var beScript = {
             || force 
             || count == 0
             || beScript.Util.checkPeriod( "teamsUpdTime", beScript.TEAM_UPDATES_CHECK_FREQ * 1000 * 60 ) ) {
-            _teams = {};
-            
             for ( var i = 0; i < teamOptions.length; i++ ) {
                 var id = teamOptions[i].value;
-                _teams[id] = {};
-                _teams[id].name = teamOptions.eq(i).text().trim();
-                _teams[id].id = id;
                 
-                _teams[id].players = {status:0};
-                _teams[id].buildings = {status:0};
+                if ( !_teams[id] ) {
+                    _teams[id] = {};
+                    _teams[id].name = teamOptions.eq(i).text().trim();
+                    _teams[id].id = id;
+                }
+                
+                if (_teams[id].players) {
+                    _teams[id].players.status = 0;
+                } else { 
+                    _teams[id].players = {status:0};
+                }
+                if (_teams[id].buildings) {
+                    _teams[id].buildings.status = 0;
+                } else { 
+                    _teams[id].buildings = {status:0};
+                }
             }
             
             if ( teamOptions.length == 0 ) { // User has 1 team
                 var id = beScript.Util.checkByRegExp( teamOptionsA.attr('href'), /(\d+)/ )[1];
 
-                _teams[id] = {};
-                _teams[id].name = teamOptionsA.text().trim();
-                _teams[id].id = id;
+                if ( !_teams[id] ) {
+                    _teams[id] = {};
+                    _teams[id].name = teamOptionsA.text().trim();
+                    _teams[id].id = id;
+                }
 
-                _teams[id].players = {status:0};
-                _teams[id].buildings = {status:0};
+                if (_teams[id].players) {
+                    _teams[id].players.status = 0;
+                } else { 
+                    _teams[id].players = {status:0};
+                }
+                if (_teams[id].buildings) {
+                    _teams[id].buildings.status = 0;
+                } else { 
+                    _teams[id].buildings = {status:0};
+                }
             }
             
             beScript.Util.serialize( "teams", _teams );
@@ -756,6 +775,7 @@ var beScript = {
         }
         
         beScript.teams = _teams;
+        beScript.log(beScript.teams);
         
         return _teams;
     },
