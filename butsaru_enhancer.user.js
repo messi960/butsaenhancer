@@ -138,7 +138,7 @@ var beScript = {
         text : "<span>Кратенько о том, что происходит со скриптом.<br/><br/>Как многие могли уже заметить, обновления стали происзодить намного реже - если в первую неделю существования скрипта он обновлялся ежедневно (а иногда и по несколько раз на дню), то сейчас обновления выходят раз в два-три дня. На самом деле, это хорошая новость. Это означает, что мелкие дополнения и баги исправлены и сейчас добавляется что-то более-менее существенное, что требует несколько больше времени, чем просто поправить две строчки. Это первое.<br /><br />Второе. Хотелось бы обратить внимание на то, что теперь существует <a href='http://bescript.reformal.ru/'>форма обратной связи</a>. Если Вы придумали что-то новое, что позволит улучшить скрипт - не стесняйтесь, пишите туда. Там же можно обсуждать и голосовать за чужие идеи - все это крайне приветствуется и ценится Вашим покорным слугой ;).<br /><br />Если же Вы обнаружили ошибку, большая просьба, добавить ее <a href='http://code.google.com/p/butsaenhancer/issues/list'>сюда</a>. Прошу обратить особое внимание на эти две ссылки (они, кстати, продублированы в <a href='http://forum.butsa.ru/index.php?showtopic=233323'>официальном топике скрипта</a> на форуме бутсы). Дело в том, что очень трудно на форуме отследить и запомнить все идеи/ошибки, а на этих сайтах все всегда будет на месте и ничего не потеряется. Спасибо!</span>"
     },
     
-	VERSION : "0.1.10",
+	VERSION : "0.1.11",
     NAMESPACE : "butsa_enhancer",
     UPDATES_CHECK_FREQ : 15, //minutes
     TEAM_UPDATES_CHECK_FREQ : 60 * 24, // minutes; recommended value is 60 * 24 = 1440 = 1 day.
@@ -2763,6 +2763,7 @@ beScript.train = {
                             player.individualPlan.push(planItem);
                         }
                         
+                        beScript.log( player.individualPlan );
                         beScript.teams[beScript.activeTeamId].players[playerId];
                         
                         window.setTimeout(beScript.Util.serialize, 0,"teams", beScript.teams);                        
@@ -2808,6 +2809,7 @@ beScript.train = {
             
             for (var i = 0; i < plan.length; i++ ) {
                 var planItem = plan[i];
+                beScript.log( planItem.name.substr );
                 
                 if ( player[planItem.name.substr(7)] < planItem.value && activeTrain != beScript.skills[planItem.name.substr(7)] ) {
                     self.animate({
@@ -2833,6 +2835,8 @@ beScript.train = {
                         style: 'ui-tooltip-dark ui-tooltip-shadow ui-tooltip-player-individual-plan',
                     });
                     
+                    break;
+                } else if (player[planItem.name.substr(7)] < planItem.value && activeTrain == beScript.skills[planItem.name.substr(7)]) {
                     break;
                 }
             }
