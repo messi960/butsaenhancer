@@ -56,12 +56,14 @@ Player = function() {
         var maxAge = parseInt(beScript.settings.playerProfile.number_of_trains_max_age);
         var maxSeasonNumber = parseInt(beScript.settings.playerProfile.number_of_trains_max_season);
         var maxNumberOfTrains = parseInt(beScript.settings.playerProfile.number_of_trains_train_num);
+        var sklls = beScript.playerTrainOrder || this.skills;
+        beScript.log( sklls );
 
         while (this.age < maxAge && (n < maxNumberOfTrains || maxNumberOfTrains == -1) && season < maxSeasonNumber) {
             if (isGk) {
                 min = 0;
-                for (j = 0; 7 >= j; j++) min += beScript.settings.playerProfile["skills_" + this.skills[j]];
-                i = this[this.skills[0]] > min ? -1: 0;
+                for (j = 0; 7 >= j; j++) min += beScript.settings.playerProfile["skills_" + sklls[j]];
+                i = this[sklls[0]] > min ? -1: 0;
             } else {
                 switch (beScript.settings.playerProfile.train_regime_radio) {
                     case 1:
@@ -69,9 +71,9 @@ Player = function() {
                             i = -1;
                             min = 100;
                             for (j = 0; 7 >= j; j++) {
-                                if (min > this[this.skills[j]] && beScript.settings.playerProfile["skills_" + this.skills[j]] > this[this.skills[j]]) {
+                                if (min > this[sklls[j]] && beScript.settings.playerProfile["skills_" + sklls[j]] > this[sklls[j]]) {
                                     i = j;
-                                    min = this[this.skills[j]];
+                                    min = this[sklls[j]];
                                 }
                             }
                         }
@@ -80,9 +82,9 @@ Player = function() {
                         {
                             i = -1;
                             min = 100;
-                            for (j = 0; 7 >= j; j++) if (beScript.settings.playerProfile["skills_" + this.skills[j]] > this[this.skills[j]]) {
+                            for (j = 0; 7 >= j; j++) if (beScript.settings.playerProfile["skills_" + sklls[j]] > this[sklls[j]]) {
                                 i = j;
-                                min = this[this.skills[j]];
+                                min = this[sklls[j]];
                                 break;
                             }
                         }
@@ -91,9 +93,9 @@ Player = function() {
                         {
                             i = -1;
                             min = 100;
-                            for (j = 0; 7 >= j; j++) if (min > (this[this.skills[j]] / beScript.settings.playerProfile["skills_" + this.skills[j]]) && beScript.settings.playerProfile["skills_" + this.skills[j]] > this[this.skills[j]]) {
+                            for (j = 0; 7 >= j; j++) if (min > (this[sklls[j]] / beScript.settings.playerProfile["skills_" + sklls[j]]) && beScript.settings.playerProfile["skills_" + sklls[j]] > this[sklls[j]]) {
                                 i = j;
-                                min = this[this.skills[j]] / beScript.settings.playerProfile["skills_" + this.skills[j]];
+                                min = this[sklls[j]] / beScript.settings.playerProfile["skills_" + sklls[j]];
                             }
                         }
                         break;
@@ -105,11 +107,11 @@ Player = function() {
             oldSkl = this.power;
             factGift = Math.min(this.talent + this.expLevel / 10, 16);
             
-            Add = Math.max(Math.round(1000 * 100 * Math.pow(9 * 0.13 + Math.pow(factGift, 0.6) * 0.6, 2) / (19 + Math.pow(this[this.skills[i]] / (isGk ? 7.7: 1), 2)) / 50 * (1 - (Math.pow(Math.abs(this.age - 22.5), 1.84)) * 0.013) * (1 - (Math.pow(this.power, 0.6)) * (0.019 - factGift * 0.001))) / 1000 - 0, 0 - 0);
+            Add = Math.max(Math.round(1000 * 100 * Math.pow(9 * 0.13 + Math.pow(factGift, 0.6) * 0.6, 2) / (19 + Math.pow(this[sklls[i]] / (isGk ? 7.7: 1), 2)) / 50 * (1 - (Math.pow(Math.abs(this.age - 22.5), 1.84)) * 0.013) * (1 - (Math.pow(this.power, 0.6)) * (0.019 - factGift * 0.001))) / 1000 - 0, 0 - 0);
             this.power += Add;
-            this[this.skills[i]] += Add;
+            this[sklls[i]] += Add;
             if (this.age >= (isGk ? 31: 30)) {
-                this[this.skills[Math.floor(Math.random() * 8)]] -= 0.015 * (this.age - (isGk ? 29: 28));
+                this[sklls[Math.floor(Math.random() * 8)]] -= 0.015 * (this.age - (isGk ? 29: 28));
                 this.power -= 0.015 * (this.age - (isGk ? 29: 28));
             }
             
@@ -138,7 +140,7 @@ var beScript = {
         text : "<span>Кратенько о том, что происходит со скриптом.<br/><br/>Как многие могли уже заметить, обновления стали происзодить намного реже - если в первую неделю существования скрипта он обновлялся ежедневно (а иногда и по несколько раз на дню), то сейчас обновления выходят раз в два-три дня. На самом деле, это хорошая новость. Это означает, что мелкие дополнения и баги исправлены и сейчас добавляется что-то более-менее существенное, что требует несколько больше времени, чем просто поправить две строчки. Это первое.<br /><br />Второе. Хотелось бы обратить внимание на то, что теперь существует <a href='http://bescript.reformal.ru/'>форма обратной связи</a>. Если Вы придумали что-то новое, что позволит улучшить скрипт - не стесняйтесь, пишите туда. Там же можно обсуждать и голосовать за чужие идеи - все это крайне приветствуется и ценится Вашим покорным слугой ;).<br /><br />Если же Вы обнаружили ошибку, большая просьба, добавить ее <a href='http://code.google.com/p/butsaenhancer/issues/list'>сюда</a>. Прошу обратить особое внимание на эти две ссылки (они, кстати, продублированы в <a href='http://forum.butsa.ru/index.php?showtopic=233323'>официальном топике скрипта</a> на форуме бутсы). Дело в том, что очень трудно на форуме отследить и запомнить все идеи/ошибки, а на этих сайтах все всегда будет на месте и ничего не потеряется. Спасибо!</span>"
     },
     
-	VERSION : "0.1.11",
+	VERSION : "0.1.12",
     NAMESPACE : "butsa_enhancer",
     UPDATES_CHECK_FREQ : 15, //minutes
     TEAM_UPDATES_CHECK_FREQ : 60 * 24, // minutes; recommended value is 60 * 24 = 1440 = 1 day.
@@ -245,6 +247,7 @@ var beScript = {
         "Cf" : 16,
         "Rf" : 17
     },
+    playerTrainOrder : null,
     skills : {
         tckl : "Отбор",
         mrk : "Опека",
@@ -958,7 +961,7 @@ var beScript = {
             parseFunction( $( "body" ).html() );
         } else {
             $.ajax({
-                url: "/xml/players/train.php?act=report",
+                url: "/xml/school/train.php?act=report",
                 success: parseFunction,
             });
         }
@@ -2181,7 +2184,7 @@ beScript.playerProfile = {
 //        contentRight.css( "background-color", "blue" );
         
         var createNumericInputWithIdAndLabel = function( id, label, _function, labelStyle, inputStyle, settingName ) {
-            var result = $( "<div />" );
+            var result = $( "<div id='" + id + "_div'/>" );
             result.attr( "style", "height:23px;");//background-color:red;border:1px solid black" );
             if ( !settingName ) {
                 settingName = "playerProfile." + id;
@@ -2312,6 +2315,21 @@ beScript.playerProfile = {
                 $( "input[id^='skills_'][id!='skills_all']" ).attr( "value", value ).blur().change();
             }
         });
+        
+        skillsDiv.sortable({
+            items: "div[id^='skills']:not(:last)",
+            cancel: ':input'
+        }).disableSelection();
+        
+        skillsDiv.find("input").bind('mousedown.ui-disableSelection selectstart.ui-disableSelection', function(e) {
+            e.stopImmediatePropagation();
+        });
+        
+        $("div[id^='skills']:not(:last),label", skillsDiv).hover(function() {
+            $(this).css('cursor','move');
+        }, function() {
+            $(this).css('cursor','auto');
+        });
 
         contentRight.append( skillsDiv );
 
@@ -2416,6 +2434,13 @@ beScript.playerProfile = {
             },
             events: {
                 hide : function( event, api ) {
+                    var result = skillsDiv.sortable( "toArray" );
+                    beScript.playerTrainOrder = [];
+                    
+                    for ( var i = 0; i < result.length; i++ ) {
+                        beScript.playerTrainOrder.push(result[i].slice(0, -4).substr(7));
+                    }
+                    
                     beScript.playerProfile.updatePlayerProgress();
                 }
             }
@@ -2778,6 +2803,12 @@ beScript.train = {
                         
                         $("#sortable", content).find("input").bind('mousedown.ui-disableSelection selectstart.ui-disableSelection', function(e) {
                             e.stopImmediatePropagation();
+                        });
+                        
+                        $("#sortable > li:not(:last)", content).hover(function() {
+                            $(this).css('cursor','move');
+                        }, function() {
+                            $(this).css('cursor','auto');
                         });
                     }
                 }
