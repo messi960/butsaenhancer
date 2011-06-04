@@ -1,7 +1,7 @@
 {
   // Required
   "name": "beScript",
-  "version": "0.1.11",
+  "version": "0.1.12",
 
   // Recommended
   "background_page": "background.html",
