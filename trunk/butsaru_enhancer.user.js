@@ -2325,7 +2325,7 @@ beScript.playerProfile = {
             e.stopImmediatePropagation();
         });
         
-        $("div[id^='skills']:not(:last),label", skillsDiv).hover(function() {
+        $("div[id^='skills']:not(:last),label:not(:last)", skillsDiv).hover(function() {
             $(this).css('cursor','move');
         }, function() {
             $(this).css('cursor','auto');
