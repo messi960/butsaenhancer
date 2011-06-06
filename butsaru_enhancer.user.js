@@ -140,7 +140,7 @@ var beScript = {
         text : "<span>Кратенько о том, что происходит со скриптом.<br/><br/>Как многие могли уже заметить, обновления стали происзодить намного реже - если в первую неделю существования скрипта он обновлялся ежедневно (а иногда и по несколько раз на дню), то сейчас обновления выходят раз в два-три дня. На самом деле, это хорошая новость. Это означает, что мелкие дополнения и баги исправлены и сейчас добавляется что-то более-менее существенное, что требует несколько больше времени, чем просто поправить две строчки. Это первое.<br /><br />Второе. Хотелось бы обратить внимание на то, что теперь существует <a href='http://bescript.reformal.ru/'>форма обратной связи</a>. Если Вы придумали что-то новое, что позволит улучшить скрипт - не стесняйтесь, пишите туда. Там же можно обсуждать и голосовать за чужие идеи - все это крайне приветствуется и ценится Вашим покорным слугой ;).<br /><br />Если же Вы обнаружили ошибку, большая просьба, добавить ее <a href='http://code.google.com/p/butsaenhancer/issues/list'>сюда</a>. Прошу обратить особое внимание на эти две ссылки (они, кстати, продублированы в <a href='http://forum.butsa.ru/index.php?showtopic=233323'>официальном топике скрипта</a> на форуме бутсы). Дело в том, что очень трудно на форуме отследить и запомнить все идеи/ошибки, а на этих сайтах все всегда будет на месте и ничего не потеряется. Спасибо!</span>"
     },
     
-	VERSION : "0.1.12",
+	VERSION : "0.1.13",
     NAMESPACE : "butsa_enhancer",
     UPDATES_CHECK_FREQ : 15, //minutes
     TEAM_UPDATES_CHECK_FREQ : 60 * 24, // minutes; recommended value is 60 * 24 = 1440 = 1 day.
@@ -1534,10 +1534,11 @@ beScript.roster = {
                         var value = $("<table/>").append( "<tbody/>" );
                         var isGk = (player.primaryPosition == 'Gk');
                         var overallBonusLevel = 0;
+                        beScript.log( player.bonuses );
                         
                         for ( var i in player.bonuses ) {
                             if ( i == 'str' ) continue;
-                            overallBonusLevel += player.bonuses[i];
+                            overallBonusLevel += parseInt(player.bonuses[i]);
                         }
                         
                         beScript.log(overallBonusLevel);
@@ -1562,20 +1563,26 @@ beScript.roster = {
                                         url: "/xml/players/info.php?type=players/profile&act=bonus",
                                         data: "step=1&oldact=bonus&act=bonus&NewBonus=" + bns.id + "&type=players/profile&firstpage=/xml/players/info.php?act=bonus&id=" + playerId,
                                         success: function( data ) {
-                                            player.bonusPoints -= player.nextBonusPoints;
-                                            player.nextBonusPoints = beScript.bonuses.nextBonus( overallBonusLevel + 1 );
+                                            $.ajax({
+                                                type: "GET",
+                                                url: "/xml/players/info.php?act=bonus&id=" + playerId,
+                                                success: function( data ) {
+                                                    player.bonusPoints -= player.nextBonusPoints;
+                                                    player.nextBonusPoints = beScript.bonuses.nextBonus( overallBonusLevel + 1 );
 
-                                            if ( player.bonuses[bns.abbr] ) {
-                                                player.bonuses[bns.abbr] += 1;
-                                            } else {
-                                                player.bonuses[bns.abbr] = 1;
-                                            }
-                                            
-                                            player.bonuses.str = beScript.bonuses.createBonusStr( player.bonuses );
-                                            bonusA.parent().html( player.bonusPoints + "(" + player.nextBonusPoints + ")" );
-                                            td.prev().html( "<center>" + player.bonuses.str + "</center>" );
-                                            beScript.teams[currteamid].players[playerId] = player;
-                                            beScript.Util.serialize( "teams", beScript.teams );
+                                                    if ( player.bonuses[bns.abbr] ) {
+                                                        player.bonuses[bns.abbr] += 1;
+                                                    } else {
+                                                        player.bonuses[bns.abbr] = 1;
+                                                    }
+                                                    
+                                                    player.bonuses.str = beScript.bonuses.createBonusStr( player.bonuses );
+                                                    bonusA.parent().html( player.bonusPoints + "(" + player.nextBonusPoints + ")" );
+                                                    td.prev().html( "<center>" + player.bonuses.str + "</center>" );
+                                                    beScript.teams[currteamid].players[playerId] = player;
+                                                    beScript.Util.serialize( "teams", beScript.teams );
+                                                }
+                                            });
                                         }
                                     });
                                 });
@@ -1600,7 +1607,6 @@ beScript.roster = {
         });
     },
     addPlayersTips : function(playersTable, currteamid) {
-        beScript.log( currteamid );
         var team = beScript.teams[currteamid];
         
         if ( team ) {
@@ -1608,9 +1614,9 @@ beScript.roster = {
             
             playersRows.each(function(i) {
                 var fields = $( "td", $(this) );
-                var playerId = parseInt(beScript.Util.checkByRegExp( $( "a", $(fields[1]) ).attr( "href" ), /(\d+)/ )[1]);
+                var playerId = parseInt(beScript.Util.checkByRegExp( $( "a", fields.eq(1) ).attr( "href" ), /(\d+)/ )[1]);
 
-                $(fields[1]).qtip({
+                fields.eq(1).qtip({
                     id : 'beScript' + playerId,
                     position: {
                         my : 'left center',  // Position my top left...
