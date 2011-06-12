@@ -140,7 +140,7 @@ var beScript = {
         text : "<span>Кратенько о том, что происходит со скриптом.<br/><br/>Как многие могли уже заметить, обновления стали происзодить намного реже - если в первую неделю существования скрипта он обновлялся ежедневно (а иногда и по несколько раз на дню), то сейчас обновления выходят раз в два-три дня. На самом деле, это хорошая новость. Это означает, что мелкие дополнения и баги исправлены и сейчас добавляется что-то более-менее существенное, что требует несколько больше времени, чем просто поправить две строчки. Это первое.<br /><br />Второе. Хотелось бы обратить внимание на то, что теперь существует <a href='http://bescript.reformal.ru/'>форма обратной связи</a>. Если Вы придумали что-то новое, что позволит улучшить скрипт - не стесняйтесь, пишите туда. Там же можно обсуждать и голосовать за чужие идеи - все это крайне приветствуется и ценится Вашим покорным слугой ;).<br /><br />Если же Вы обнаружили ошибку, большая просьба, добавить ее <a href='http://code.google.com/p/butsaenhancer/issues/list'>сюда</a>. Прошу обратить особое внимание на эти две ссылки (они, кстати, продублированы в <a href='http://forum.butsa.ru/index.php?showtopic=233323'>официальном топике скрипта</a> на форуме бутсы). Дело в том, что очень трудно на форуме отследить и запомнить все идеи/ошибки, а на этих сайтах все всегда будет на месте и ничего не потеряется. Спасибо!</span>"
     },
     
-	VERSION : "0.1.13",
+	VERSION : "0.1.14",
     NAMESPACE : "butsa_enhancer",
     UPDATES_CHECK_FREQ : 15, //minutes
     TEAM_UPDATES_CHECK_FREQ : 60 * 24, // minutes; recommended value is 60 * 24 = 1440 = 1 day.
@@ -217,7 +217,9 @@ var beScript = {
         }
     },
     menuElem : null,
-    teams : null,
+    __teams : null,
+    __teamsArchive : null,
+    userId : -1,
     activeTeamId : -1,
     trainNumber : -1,
     playingDay : -1,
@@ -311,7 +313,7 @@ var beScript = {
     },
     bonusesByAbbr : null,
     getPlayerById : function( team, id ) {
-        var players = beScript.teams[team.id].players;
+        var players = beScript.getMyTeams()[team.id].players;
         var player = null;
         
         if ( !players || !players[id] ) {
@@ -342,11 +344,11 @@ var beScript = {
                         var playersTable = $($(".maintable", _data)[2]);
                         var playersRows = $( "tr[bgcolor='#ffffff'],tr[bgcolor='#EEF4FA']", playersTable );
                         var teamPlayers = {
-                            status : beScript.teams[team.id].players.status
+                            status : beScript.getMyTeams()[team.id].players.status
                         };
                         
-                        if ( beScript.teams[team.id].players ) {
-                            teamPlayers.status = beScript.teams[team.id].players.status
+                        if ( beScript.getMyTeams()[team.id].players ) {
+                            teamPlayers.status = beScript.getMyTeams()[team.id].players.status
                         }
 
                         playersRows.each(function(i) {
@@ -365,17 +367,17 @@ var beScript = {
                             player.age = parseInt( $(fields[4]).text().trim() );
                             player.morale = parseInt(beScript.Util.checkByRegExp($(fields[10]).attr("title"), /\d+/)[0]);
                             var bonusesStr = $(fields[11]).text().trim();
-
+                            player.bonuses = {str:bonusesStr};
+                            
                             if ( bonusesStr.length > 0 ) {
                                 var bonuses = bonusesStr.split( /\s/ );
-                                player.bonuses = {str:bonusesStr};
 
                                 for ( var k = 0; k < bonuses.length; k++ ) {
                                     var bonusArr = beScript.Util.checkByRegExp( bonuses[k], /(.{2})(\d)?/ );
                                     var bonus = beScript.bonusesByAbbr[bonusArr[1]];
                                     var level = bonusArr[2] || 1;
                                     
-                                    player.bonuses[bonus.abbr] = level
+                                    player.bonuses[bonus.abbr] = parseInt(level);
                                 }
                             }
                             
@@ -400,20 +402,20 @@ var beScript = {
                         var division = $("input[name='Division']", _data).attr( "value" );
                         if ( division ) {
                             var divisionId = beScript.Util.checkByRegExp(division, /division=(\d+)/)[1];
-                            beScript.teams[team.id].divisionId = divisionId;
+                            beScript.__teams[team.id].divisionId = divisionId;
                             beScript.log( "Division id of " + team.name + " is " + divisionId );
                         }
                         
                         var teamId = $("input[name='ShortName']", _data).attr( "value" );
                         if ( teamId ) {
                             var teamLitId = beScript.Util.checkByRegExp(teamId, /([^\s]+)\s\(\d+\)/)[1];
-                            beScript.teams[team.id].literalId = teamLitId;
+                            beScript.__teams[team.id].literalId = teamLitId;
                             beScript.log( "Literal id of " + team.name + " is " + teamLitId );
                         }
                         
                         teamPlayers.status |= 1;
-                        beScript.teams[team.id].players = teamPlayers;
-                        beScript.Util.serialize( "teams", beScript.teams );
+                        beScript.__teams[team.id].players = teamPlayers;
+                        beScript.saveMyTeams( beScript.__teams );
                     }
                 });
             }
@@ -424,7 +426,7 @@ var beScript = {
                         var playersTable = $($(".maintable", $(data))[2]);
                         var playersRows = $( "tr[bgcolor='#ffffff'],tr[bgcolor='#EEF4FA']", playersTable );
                         var teamPlayers = {
-                            status : beScript.teams[team.id].players.status
+                            status : beScript.getMyTeams()[team.id].players.status
                         };
 
                         playersRows.each(function(i) {
@@ -444,8 +446,8 @@ var beScript = {
                         
                         teamPlayers.status |= 2;
 
-                        beScript.teams[team.id].players = teamPlayers;
-                        beScript.Util.serialize( "teams", beScript.teams );
+                        beScript.__teams[team.id].players = teamPlayers;
+                        beScript.saveMyTeams( beScript.__teams );
                     }
                 });
             }
@@ -456,7 +458,7 @@ var beScript = {
                         var playersTable = $($(".maintable", $(data))[2]);
                         var playersRows = $( "tr[bgcolor='#ffffff'],tr[bgcolor='#EEF4FA']", playersTable );
                         var teamPlayers = {
-                            status : beScript.teams[team.id].players.status
+                            status : beScript.getMyTeams()[team.id].players.status
                         };
                         
                         playersRows.each(function(i) {
@@ -473,8 +475,8 @@ var beScript = {
                         
                         teamPlayers.status |= 4;
 
-                        beScript.teams[team.id].players = teamPlayers;
-                        beScript.Util.serialize( "teams", beScript.teams );
+                        beScript.__teams[team.id].players = teamPlayers;
+                        beScript.saveMyTeams( beScript.__teams );
                     }
                 });
             }
@@ -485,7 +487,7 @@ var beScript = {
                         var playersTable = $($(".maintable", $(data))[2]);
                         var playersRows = $( "tr[bgcolor='#ffffff'],tr[bgcolor='#EEF4FA']", playersTable );
                         var teamPlayers = {
-                            status : beScript.teams[team.id].players.status
+                            status : beScript.getMyTeams()[team.id].players.status
                         };
                         
                         playersRows.each(function(i) {
@@ -508,15 +510,15 @@ var beScript = {
                         
                         teamPlayers.status |= 8;
 
-                        beScript.teams[team.id].players = teamPlayers;
-                        beScript.Util.serialize( "teams", beScript.teams );
+                        beScript.__teams[team.id].players = teamPlayers;
+                        beScript.saveMyTeams( beScript.__teams );
                     }
                 });
             }
         }
     },
     reloadBuildings : function( data ) {
-        var team = beScript.teams[beScript.activeTeamId];
+        var team = beScript.getMyTeams()[beScript.activeTeamId];
         var buildingsTrs = $(".maintable table > tbody > tr[bgcolor='#F5F8FA']", data);
         var buildings = team.buildings;
         
@@ -561,13 +563,13 @@ var beScript = {
         });
         
         buildings.status |= 1;
-        beScript.teams[team.id].buildings = buildings;
-        beScript.Util.serialize( "teams", beScript.teams );
-        beScript.log( beScript.teams[team.id].buildings );
+        beScript.__teams[team.id].buildings = buildings;
+        beScript.__teams( beScript.__teams );
+        beScript.log( beScript.getMyTeams()[team.id].buildings );
     },
     reloadStadium : function( data ) {
         beScript.log( "Updating stadium buildings..." );
-        var team = beScript.teams[beScript.activeTeamId];
+        var team = beScript.getMyTeams()[beScript.activeTeamId];
         var buildingsTrs = $(".maintable table > tbody > tr[bgcolor='#F5F8FA']", data);
         var buildings = team.buildings;
 
@@ -611,13 +613,13 @@ var beScript = {
         });
         
         buildings.status |= 2;
-        beScript.teams[team.id].buildings = buildings;
-        beScript.Util.serialize( "teams", beScript.teams );
-        beScript.log( beScript.teams[team.id].buildings );
+        beScript.__teams[team.id].buildings = buildings;
+        beScript.saveMyTeams( beScript.__teams );
+        beScript.log( beScript.getMyTeams()[team.id].buildings );
     },
     loadBuildings : function( force, page, pageData ) {
         beScript.log( "Updating buildings..." );
-        var team = beScript.teams[beScript.activeTeamId];
+        var team = beScript.getMyTeams()[beScript.activeTeamId];
         var buildingsLoaded = (team.buildings && $(team.buildings).length > 0);
         var timeUpdaterFired = beScript.Util.checkPeriod( "buildingsUpdTime_" + beScript.activeTeamId, beScript.BUILDINGS_UPDATES_CHECK_FREQ * 1000 * 60 );
         
@@ -654,7 +656,7 @@ var beScript = {
             return;
         }
         
-        var _teams = beScript.teams;
+        var _teams = beScript.getMyTeams();
         var activeTeamLink = $( "<b><a href='/roster/'>" + _teams[beScript.activeTeamId].name + "</a></b>" );
         
         teamSelect.replaceWith(activeTeamLink);
@@ -706,13 +708,55 @@ var beScript = {
                 }                    
             });
     },
-    loadTeams : function( force ) {
-        var _teams = beScript.Util.deserialize( "teams", {} );
+    getCurrentTeamsIdNameMap : function() {
         var teamOptions = $("select", beScript.menuElem.parent().parent()).children();
         var teamOptionsA = $("a[href*='roster']", beScript.menuElem.parent().parent());
+        var currentTeamIds = {};
+        
+        if (teamOptions.size() > 0) {
+            for ( var i = 0; i < teamOptions.length; i++ ) {
+                currentTeamIds[teamOptions[i].value] = teamOptions.eq(i).text().trim();
+            }
+        } else {
+            var id = beScript.Util.checkByRegExp( teamOptionsA.attr('href'), /(\d+)/ )[1];
+            currentTeamIds[id] = teamOptionsA.text().trim();
+        }
+
+        return currentTeamIds;
+    },
+    loadTeams : function( force ) {
+        var _teams = beScript.getMyTeams();
+        var teamOptions = $("select", beScript.menuElem.parent().parent()).children();
+        var teamOptionsA = $("a[href*='roster']", beScript.menuElem.parent().parent());
+        var currentTeamIds = beScript.getCurrentTeamsIdNameMap();
+        
         var count = 0;
         for ( var i in _teams ) {
             count++;
+        }
+        
+        var needsUpdate = (currentTeamIds.length != count);
+        var teamsArchive = null;
+         
+        if (!needsUpdate) {
+            for (var teamId in _teams) {
+                if (!(teamId in currentTeamIds)) {
+                    if (teamsArchive == null) {
+                        teamsArchive = beScript.getTeamsArchive();
+                    }
+                    
+                    teamsArchive[teamId] = _teams[teamId];
+                    
+                    delete _teams[teamId];
+                    _teams[teamId] = null;
+                    
+                    needsUpdate = true;
+                }
+            }
+        }
+        
+        if ( teamsArchive != null ) {
+            beScript.saveTeamsArchive( teamsArchive );
         }
         
         if ( teamOptions.size() != 0 ) {
@@ -723,37 +767,14 @@ var beScript = {
 
         beScript.log( "Active team id is " + beScript.activeTeamId );
 
-        if ( (teamOptions.length != count || (teamOptions.length == 0 && teamOptionsA.length != count)) 
+        if ( needsUpdate 
             || force 
             || count == 0
             || beScript.Util.checkPeriod( "teamsUpdTime", beScript.TEAM_UPDATES_CHECK_FREQ * 1000 * 60 ) ) {
-            for ( var i = 0; i < teamOptions.length; i++ ) {
-                var id = teamOptions[i].value;
-                
+            for (var id in currentTeamIds) {
                 if ( !_teams[id] ) {
                     _teams[id] = {};
-                    _teams[id].name = teamOptions.eq(i).text().trim();
-                    _teams[id].id = id;
-                }
-                
-                if (_teams[id].players) {
-                    _teams[id].players.status = 0;
-                } else { 
-                    _teams[id].players = {status:0};
-                }
-                if (_teams[id].buildings) {
-                    _teams[id].buildings.status = 0;
-                } else { 
-                    _teams[id].buildings = {status:0};
-                }
-            }
-            
-            if ( teamOptions.length == 0 ) { // User has 1 team
-                var id = beScript.Util.checkByRegExp( teamOptionsA.attr('href'), /(\d+)/ )[1];
-
-                if ( !_teams[id] ) {
-                    _teams[id] = {};
-                    _teams[id].name = teamOptionsA.text().trim();
+                    _teams[id].name = currentTeamIds[id];
                     _teams[id].id = id;
                 }
 
@@ -769,7 +790,7 @@ var beScript = {
                 }
             }
             
-            beScript.Util.serialize( "teams", _teams );
+            beScript.saveMyTeams( _teams );
         }
         
         for ( var i in _teams ) {
@@ -777,10 +798,7 @@ var beScript = {
             beScript.loadTeamPlayers( _teams[i], force );
         }
         
-        beScript.teams = _teams;
-        beScript.log(beScript.teams);
-        
-        return _teams;
+        beScript.log(beScript.getMyTeams());
     },
     initBonusesByAbbr : function() {
         beScript.bonusesByAbbr = {};
@@ -1019,6 +1037,63 @@ var beScript = {
     addReformalLink : function() {
         MyOtziv.mo_showframe();
     },
+    updateTeamsStorage : function() {
+        var _teams = beScript.getMyTeams();
+        
+        if (!_teams) {
+            _teams = {};
+            var allTeams = beScript.Util.deserialize( "teams", {} );
+            
+            var teamOptions = $("select", beScript.menuElem.parent().parent()).children();
+            var teamOptionsA = $("a[href*='roster']", beScript.menuElem.parent().parent());
+            var currentTeamIds = [];
+            
+            if (teamOptions.size() > 0) {
+                for ( var i = 0; i < teamOptions.length; i++ ) {
+                    currentTeamIds.push(teamOptions[i].value);
+                }
+            } else {
+                var id = beScript.Util.checkByRegExp( teamOptionsA.attr('href'), /(\d+)/ )[1];
+                currentTeamIds.push(id);
+            }
+            
+            for ( var i = 0; i < currentTeamIds.length; i++ ) {
+                var teamId = currentTeamIds[i];
+                var teamToSave = allTeams[teamId];
+                
+                if (teamToSave) {
+                    _teams[teamId] = teamToSave;
+                }
+            }
+            
+            beScript.saveMyTeams(_teams);
+        }
+    },
+    getTeamsArchive : function() {
+        if (beScript.__teamsArchive == null) {
+            beScript.__teamsArchive = beScript.Util.deserialize( "teams", {} );
+        }
+        
+        return beScript.__teamsArchive;
+    },
+    saveTeamsArchive : function( teamsArchive ) {
+        beScript.Util.serialize( "teams", teamsArchive );
+        beScript.__teamsArchive = teamsArchive;
+    },
+    getMyTeams : function() {
+        if (beScript.__teams == null) {
+            var allTeams = beScript.Util.deserialize( "playerTeams", {} );
+            beScript.__teams = allTeams[beScript.userId];
+        }
+        
+        return beScript.__teams;
+    },
+    saveMyTeams : function( teams ) {
+        var allTeams = beScript.Util.deserialize( "playerTeams", {} );
+        allTeams[beScript.userId] = teams;
+        beScript.Util.serialize( "playerTeams", allTeams );
+        beScript.__teams = teams;
+    },
     init : function() {
         beScript.log( "jQuery version: " + $().jquery );
         var act = beScript.Util.checkByRegExp( window.location.href, /act=(\w+)/ );
@@ -1026,11 +1101,21 @@ var beScript = {
 
         beScript.settings = beScript.Util.deserialize( "settings", beScript.default_settings );
         
+        if (beScript.Util.checkLocation( "train.php" ) && (beScript.hrefAction == "vip")) {
+//            beScript.train.vipProcess();
+            return;
+        }
+
         if ( !beScript.settings.playerProfile ) {
             beScript.settings.playerProfile = beScript.default_settings.playerProfile;
         }
         
         beScript.addBeScriptMenu();
+        
+        beScript.userId = parseInt(beScript.Util.checkByRegExp( $( ">b>a", $( "#beScript_td" ).next()).attr("href"), /\/users\/(\d+)/ )[1]);
+        
+        beScript.updateTeamsStorage();
+
         beScript.initBonusesByAbbr();
         beScript.loadTeams();
         beScript.loadBuildings();
@@ -1472,7 +1557,7 @@ beScript.organizer = {
         });
     },
     addLastMatchesResults : function() {
-        var _teams = beScript.teams;
+        var _teams = beScript.getMyTeams();
         
         if ( _teams ) {
             var tableheader = $('tr[bgcolor="#D3E1EC"][align="center"]');
@@ -1490,7 +1575,7 @@ beScript.organizer = {
                 }
             }
             
-            beScript.teams = _teams;
+            beScript.__teams = _teams;
         }
     },
     process : function() {
@@ -1529,7 +1614,7 @@ beScript.roster = {
                 events: {
                     show: function(event, api) {
                         var currteamid = $( "input[name='id']" ).attr( "value" );
-                        var team = beScript.teams[currteamid];
+                        var team = beScript.getMyTeams()[currteamid];
                         var player = team.players[playerId];
                         var value = $("<table/>").append( "<tbody/>" );
                         var isGk = (player.primaryPosition == 'Gk');
@@ -1579,8 +1664,9 @@ beScript.roster = {
                                                     player.bonuses.str = beScript.bonuses.createBonusStr( player.bonuses );
                                                     bonusA.parent().html( player.bonusPoints + "(" + player.nextBonusPoints + ")" );
                                                     td.prev().html( "<center>" + player.bonuses.str + "</center>" );
-                                                    beScript.teams[currteamid].players[playerId] = player;
-                                                    beScript.Util.serialize( "teams", beScript.teams );
+                                                    var teams = beScript.getMyTeams();
+                                                    teams[currteamid].players[playerId] = player;
+                                                    beScript.saveMyTeams( teams );
                                                 }
                                             });
                                         }
@@ -1607,7 +1693,7 @@ beScript.roster = {
         });
     },
     addPlayersTips : function(playersTable, currteamid) {
-        var team = beScript.teams[currteamid];
+        var team = beScript.getMyTeams()[currteamid];
         
         if ( team ) {
             var playersRows = $( "tr[bgcolor='#ffffff'],tr[bgcolor='#EEF4FA']", $( "tbody", playersTable ) );
@@ -1697,7 +1783,7 @@ beScript.roster = {
         var header = $( ".header", buildingsTable );
         var content = $( "tr[bgcolor='ffffff']" );
         var repairImage = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAABmJLR0QA/gD+AP7rGNSCAAAACXBIWXMAAAsRAAALEQF/ZF+RAAAACXZwQWcAAAAMAAAADADOpTJ+AAABpElEQVQoz3WQv6tScRjGn/f99kO6ZS5+7+hgIYRBw3HQ5CwqCE2SQ4NUo6vgIIIt/QP9AY1FuIg4XAkaAgMHuQ7G4RANqZQo5xwhIbmK8rZ4zKXP+vJ5eJ+HAICIFDPv4/H4w2Aw+Hi9Xt8cDodvReQPAAIg8CEiAGAASKfTz9vttti2LcVi8QOA4OH+D6UURyKRR0qpAAAkk8lXg8FAer2ehMPhF4fQo8WBQOBOuVz+aJrmawBYLBY/iAjT6XTrOM4GgBKR40vXtNapVCqlTdOstFqtZDQava+1xmg0ug7gioj2B2nvS7dyudw7y7JkuVzuZ7OZjMfj3WQykWq1+pWZ7/nDnJY+y2Qy70ul0mUikfjU7XZ3nuftPM+TWq1mEVGMiI6S3+mMiKIA7hqG8cayLHFd92q1Wkm9Xv8O4MHpWERExMyklAKAG4VC4cJxHPE8b7PdbqXRaHxjZkOdSiICEWFm3tm2/Vkp9SSfz583m81NNps9d103dir4CAAF4He/37/UWj+NxWK35/M5Op3OL/wPv2AoFHpWqVR+GobxBcDLv0SWqPpsyqlzAAAAAElFTkSuQmCC";
-        var team = beScript.teams[beScript.activeTeamId];
+        var team = beScript.getMyTeams()[beScript.activeTeamId];
         
         var buildingsToFix = {};
         var toFix = false;
@@ -1725,7 +1811,7 @@ beScript.roster = {
                         var btf = buildingsToFix[days] || "";
                         btf += building.name + " - " + building.condition + "%<br />";
                         buildingsToFix[days] = btf;
-                        beScript.teams[beScript.activeTeamId].buildings[id].lastNotification = new Date().getTime();
+                        beScript.__teams[beScript.activeTeamId].buildings[id].lastNotification = new Date().getTime();
                     }
                     
                     if ( beScript.settings.helpers_fast_repair !== false ) {
@@ -1765,7 +1851,7 @@ beScript.roster = {
             }
             
             createGrowl( str, "Требуется ремонт!" );
-            beScript.Util.serialize( "teams", beScript.teams );
+            beScript.saveMyTeams( beScript.__teams );
         }
         
         if ( beScript.settings.helpers_fast_repair !== false ) {
@@ -1800,10 +1886,10 @@ beScript.roster = {
                             var building = team.buildings[id];
 
                             if ( $( "img[src='http://butsa.ru/images/icons/ok.gif']", data ).length ) {
-                                beScript.teams[beScript.activeTeamId].buildings[id].condition = 100;
-                                beScript.teams[beScript.activeTeamId].buildings[id].repairDate = new Date().getTime();
+                                beScript.__teams[beScript.activeTeamId].buildings[id].condition = 100;
+                                beScript.__teams[beScript.activeTeamId].buildings[id].repairDate = new Date().getTime();
                                 
-                                beScript.Util.serialize( "teams", beScript.teams );
+                                beScript.saveMyTeams( beScript.__teams );
                                 
                                 $( '#beScript_repair_a_id' + id, buildingsTable ).css( 'color', '' );
                                 image.remove();
@@ -1818,15 +1904,15 @@ beScript.roster = {
                                     var repairDate = new Date().getTime();
                                     
                                     if ( building.condition < 100 ) {
-                                        beScript.teams[beScript.activeTeamId].buildings[buildingId].condition = 100;
-                                        beScript.teams[beScript.activeTeamId].buildings[buildingId].repairDate = repairDate;
+                                        beScript.__teams[beScript.activeTeamId].buildings[buildingId].condition = 100;
+                                        beScript.__teams[beScript.activeTeamId].buildings[buildingId].repairDate = repairDate;
                                     }
                                     
                                     $( "[id^='beScript_repair_a_id']", buildingsTable ).css( 'color', '' );
                                     repairImages.remove();
                                 }
                                 
-                                beScript.Util.serialize( "teams", beScript.teams );
+                                beScript.saveMyTeams( beScript.__teams );
                                 createGrowl( "Все постройки отремонтированы.", "Все постройки отремонтированы" );
                             } else {
                                 createGrowl( "Постройки не могут быть отремонтированы, так как на счету команды недостаточно средств.", "Невозможно отремонтировать постройки" );
@@ -2027,7 +2113,7 @@ beScript.roster = {
             }
 
             if ( (beScript.settings.helpers_fast_repair !== false || beScript.settings.helpers_repair_reminder !== false) && beScript.activeTeamId == parseInt(currteamid) ) {
-                GM_wait( 'beScript.teams[beScript.activeTeamId].buildings.status == 3', beScript.roster.addRepairLinks, beScript );
+                GM_wait( 'beScript.__teams[beScript.activeTeamId].buildings.status == 3', beScript.roster.addRepairLinks, beScript );
             }
             
             if (beScript.settings.helpers_prices_link !== false && beScript.activeTeamId == parseInt(currteamid)) {
@@ -2079,7 +2165,7 @@ beScript.club = {
         var processbest11ToPsychoButton = function() {
             this.disabled = true;
             $(this).attr( "class", "disabledbutton" );
-            var players = beScript.teams[beScript.activeTeamId].players;
+            var players = beScript.getMyTeams()[beScript.activeTeamId].players;
             var bestEleven = {};
             var playersPower = [];
             
@@ -2712,9 +2798,9 @@ beScript.train = {
             if ( $("select", tds.eq(8)).size() == 0 ) return; // goalkeeper
             
             var playerId = parseInt(beScript.Util.checkByRegExp( tds.eq(1).find("a").attr( "href" ), /(\d+)/ )[1]);
-            var player = beScript.teams[beScript.activeTeamId].players[playerId];
+            var player = beScript.getMyTeams()[beScript.activeTeamId].players[playerId];
             if (!player) {
-                beScript.log( "Error! Cannot find player " + playerId + " in team " + beScript.teams[beScript.activeTeamId].name );
+                beScript.log( "Error! Cannot find player " + playerId + " in team " + beScript.getMyTeams()[beScript.activeTeamId].name );
                 return;
             } 
             
@@ -2795,9 +2881,9 @@ beScript.train = {
                         }
                         
                         beScript.log( player.individualPlan );
-                        beScript.teams[beScript.activeTeamId].players[playerId];
+//                        beScript.getMyTeams()[beScript.activeTeamId].players[playerId];
                         
-                        window.setTimeout(beScript.Util.serialize, 0,"teams", beScript.teams);                        
+                        window.setTimeout(beScript.saveMyTeams, 0, beScript.__teams);                        
                     },
                     render: function( event, api ) {
                         var content = api.elements.content;
@@ -2836,7 +2922,7 @@ beScript.train = {
             if ( tds.size() == 0 || tds.eq(0).text().trim() == "№" || tds.eq(0).text().trim() == "" ) return; // header and footer
 
             var playerId = parseInt(beScript.Util.checkByRegExp( tds.eq(1).find("a").attr( "href" ), /(\d+)/ )[1]);
-            var player = beScript.teams[beScript.activeTeamId].players[playerId];
+            var player = beScript.getMyTeams()[beScript.activeTeamId].players[playerId];
             
             if (player.primaryPosition == "Gk" || !player.individualPlan) return;
             
@@ -2932,9 +3018,18 @@ beScript.train = {
                 beScript.train.processIndividualPlan( trainTable.eq(0) );
             }
             
-            GM_wait( 'beScript.teams[beScript.activeTeamId].players.status == 15', tmp, beScript );
+            GM_wait( 'beScript.__teams[beScript.activeTeamId].players.status == 15', tmp, beScript );
         }
-    }
+    },
+    
+    //  ------------ VIP trains -----------
+    
+    addCheckboxesForVipTrain : function() {
+    },
+    vipProcess : function() {
+        var trainTable = $(".maintable");
+        
+    },
 };
 
 beScript.Update = {
