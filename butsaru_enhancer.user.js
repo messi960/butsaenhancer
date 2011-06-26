@@ -1569,12 +1569,19 @@ beScript.organizer = {
             
             if (!isVip) {
                 var rightCell = $( "td[background='/images/mainarea/right/welcome-bk2.gif']" );
-                $("> table>tbody>tr>td", rightCell).prepend('<table class="maintable" border="0" width="100%" bgcolor="#D0D0D0" cellspacing="1" cellpadding="3">'
+                var str = '<table class="maintable" border="0" width="100%" bgcolor="#D0D0D0" cellspacing="1" cellpadding="3">'
                                 + '<thead style="font-size: 11px;"><tr bgcolor="#D3E1EC" align="center"><th><b>Команда</b></th></thead>'
-                                + '<tbody>'
-                                + '<tr bgcolor="#ffffff"><td>Имотска Краджина</td></tr>'
-                                + '<tr bgcolor="#EEF4FA"><td>Промень</td></tr>'
-                                + '</tbody></table><br/>');
+                                + '<tbody>';
+                var cnt = 0;
+                
+                for ( var i in _teams ) {
+                    str += '<tr bgcolor="' + ((cnt%2 == 0)?"#ffffff":"#EEF4FA") + '"><td>' + _teams[i].name + '</td></tr>'
+                    cnt++;
+                }
+                                
+                str += '</tbody></table><br/>';
+                
+                $("> table>tbody>tr>td", rightCell).prepend(str);
             }
         
             var tableheader = $('tr[bgcolor="#D3E1EC"][align="center"]');
