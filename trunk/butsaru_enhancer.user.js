@@ -140,7 +140,7 @@ var beScript = {
         text : "<span>Кратенько о том, что происходит со скриптом.<br/><br/>Как многие могли уже заметить, обновления стали происзодить намного реже - если в первую неделю существования скрипта он обновлялся ежедневно (а иногда и по несколько раз на дню), то сейчас обновления выходят раз в два-три дня. На самом деле, это хорошая новость. Это означает, что мелкие дополнения и баги исправлены и сейчас добавляется что-то более-менее существенное, что требует несколько больше времени, чем просто поправить две строчки. Это первое.<br /><br />Второе. Хотелось бы обратить внимание на то, что теперь существует <a href='http://bescript.reformal.ru/'>форма обратной связи</a>. Если Вы придумали что-то новое, что позволит улучшить скрипт - не стесняйтесь, пишите туда. Там же можно обсуждать и голосовать за чужие идеи - все это крайне приветствуется и ценится Вашим покорным слугой ;).<br /><br />Если же Вы обнаружили ошибку, большая просьба, добавить ее <a href='http://code.google.com/p/butsaenhancer/issues/list'>сюда</a>. Прошу обратить особое внимание на эти две ссылки (они, кстати, продублированы в <a href='http://forum.butsa.ru/index.php?showtopic=233323'>официальном топике скрипта</a> на форуме бутсы). Дело в том, что очень трудно на форуме отследить и запомнить все идеи/ошибки, а на этих сайтах все всегда будет на месте и ничего не потеряется. Спасибо!</span>"
     },
     
-	VERSION : "0.1.15",
+	VERSION : "0.1.16",
     NAMESPACE : "butsa_enhancer",
     UPDATES_CHECK_FREQ : 15, //minutes
     TEAM_UPDATES_CHECK_FREQ : 60 * 24, // minutes; recommended value is 60 * 24 = 1440 = 1 day.
@@ -564,7 +564,7 @@ var beScript = {
         
         buildings.status |= 1;
         beScript.__teams[team.id].buildings = buildings;
-        beScript.__teams( beScript.__teams );
+        beScript.saveMyTeams( beScript.__teams );
         beScript.log( beScript.getMyTeams()[team.id].buildings );
     },
     reloadStadium : function( data ) {
@@ -1565,15 +1565,35 @@ beScript.organizer = {
         var _teams = beScript.getMyTeams();
         
         if ( _teams ) {
-            var tableheader = $('tr[bgcolor="#D3E1EC"][align="center"]');
+            var isVip = ($( "td:contains('Опция доступна только VIP-пользователям')", document ).size == 0);
+            
+            if (!isVip) {
+                var rightCell = $( "td[background='/images/mainarea/right/welcome-bk2.gif']" );
+                $("> table>tbody>tr>td", rightCell).prepend('<table class="maintable" border="0" width="100%" bgcolor="#D0D0D0" cellspacing="1" cellpadding="3">'
+                                + '<thead style="font-size: 11px;"><tr bgcolor="#D3E1EC" align="center"><th><b>Команда</b></th></thead>'
+                                + '<tbody>'
+                                + '<tr bgcolor="#ffffff"><td>Имотска Краджина</td></tr>'
+                                + '<tr bgcolor="#EEF4FA"><td>Промень</td></tr>'
+                                + '</tbody></table><br/>');
+            }
         
+            var tableheader = $('tr[bgcolor="#D3E1EC"][align="center"]');
+
             tableheader.append("<td><span title=\"Результат последнего матча\"><b>Последний матч</b></span></td>");
+            var tmp = beScript.Util.deserialize( "organizer.team." + beScript.activeTeamId );
+            var activeTeamMoney = parseInt($( "a[href='/finances/report.php']", $( "#beScript_td" ).next()).text().replace(/\./g, ''));
+            var needUpdate = tmp && (activeTeamMoney != tmp.split("|")[9]);
+            
             for ( var i in _teams ) {
                 var t = beScript.Util.deserialize( "organizer.team." + _teams[i].id );
-                var teamtablerow = document.evaluate('//td[contains(.,"' + _teams[i].name + '") and parent::tr[@bgcolor="#ffffff" or @bgcolor="#EEF4FA"]]', document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null ).singleNodeValue.parentNode;
-                var teamMoney = teamtablerow.childNodes[4].textContent.replace(/[\.\s]/g,'');
+                var teamtablerow = $("tr[bgcolor='#ffffff'],tr[bgcolor='#EEF4FA'] > td:contains('" + _teams[i].name + "')");
+                var teamMoney = -1;
+                
+                if (isVip) {
+                    teamtablerow.childNodes[4].textContent.replace(/[\.\s]/g,'');
+                }
 
-                if ( t && teamMoney == t.split("|")[9] ) {
+                if ( (isVip && (t && teamMoney == t.split("|")[9])) || (!isVip && needUpdate) ) {
                     beScript.organizer._addLastMatchesResults( _teams[i], t.split("|") );
                 } else {
                     beScript.organizer._getLastMatchResultForTeam( _teams[i] );
@@ -1792,6 +1812,8 @@ beScript.roster = {
         
         var buildingsToFix = {};
         var toFix = false;
+        var date = new Date();
+        var utcDate = date.getTime() - (date.getTimezoneOffset() * 60000);
         
         $( "td:even", content ).each( function(i) {
             var links = $( "a", this );
@@ -1806,9 +1828,9 @@ beScript.roster = {
                 if ( building.condition < 100 ) {
                     toFix = true;
                     $this.css( 'color', 'A70000' );
-                
-                    var diff = ((new Date().getTime() - building.repairDate) / 1000 / 60 / 60 / 24);
-                    var daysLN = Math.floor((new Date().getTime() - building.lastNotification) / 1000 / 60 / 60 / 24);
+
+                    var diff = ((utcDate - building.repairDate) / 1000 / 60 / 60 / 24);
+                    var daysLN = Math.floor((utcDate - building.lastNotification) / 1000 / 60 / 60 / 24);
                     var days = Math.floor(diff);
                     var hrs = Math.floor((diff - days) * 24);
                     
@@ -1816,7 +1838,7 @@ beScript.roster = {
                         var btf = buildingsToFix[days] || "";
                         btf += building.name + " - " + building.condition + "%<br />";
                         buildingsToFix[days] = btf;
-                        beScript.__teams[beScript.activeTeamId].buildings[id].lastNotification = new Date().getTime();
+                        beScript.__teams[beScript.activeTeamId].buildings[id].lastNotification = utcDate;
                     }
                     
                     if ( beScript.settings.helpers_fast_repair !== false ) {
@@ -1892,7 +1914,8 @@ beScript.roster = {
 
                             if ( $( "img[src='http://butsa.ru/images/icons/ok.gif']", data ).length ) {
                                 beScript.__teams[beScript.activeTeamId].buildings[id].condition = 100;
-                                beScript.__teams[beScript.activeTeamId].buildings[id].repairDate = new Date().getTime();
+                                var dt = new Date();
+                                beScript.__teams[beScript.activeTeamId].buildings[id].repairDate = dt.getTime() - (dt.getTimezoneOffset() * 60000);
                                 
                                 beScript.saveMyTeams( beScript.__teams );
                                 
@@ -1906,7 +1929,8 @@ beScript.roster = {
                             if ( $( "img[src='http://butsa.ru/images/icons/ok.gif']", data ).length ) {
                                 for ( var buildingId in team.buildings ) {
                                     var building = team.buildings[buildingId];
-                                    var repairDate = new Date().getTime();
+                                    var dt = new Date();
+                                    var repairDate = dt.getTime() - (dt.getTimezoneOffset() * 60000);
                                     
                                     if ( building.condition < 100 ) {
                                         beScript.__teams[beScript.activeTeamId].buildings[buildingId].condition = 100;
@@ -2807,7 +2831,7 @@ beScript.train = {
             if (!player) {
                 beScript.log( "Error! Cannot find player " + playerId + " in team " + beScript.getMyTeams()[beScript.activeTeamId].name );
                 return;
-            } 
+            }
             
             tds.eq(8).css( "width", "175px" );
             var img = $("<img style='align:right; vertical-align:bottom;' src='" + settingsIcon + "'>");
@@ -2928,6 +2952,10 @@ beScript.train = {
 
             var playerId = parseInt(beScript.Util.checkByRegExp( tds.eq(1).find("a").attr( "href" ), /(\d+)/ )[1]);
             var player = beScript.getMyTeams()[beScript.activeTeamId].players[playerId];
+
+            if (!player) {
+                return;
+            }
             
             if (player.primaryPosition == "Gk" || !player.individualPlan) return;
             
