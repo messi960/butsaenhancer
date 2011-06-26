@@ -1500,21 +1500,36 @@ beScript.forecasts = {
 
 beScript.organizer = {
     _parseMatchesPage : function( text ) {
-        var regex = new RegExp( /<tr\s*bgcolor=#ffffff\s*><td>\s<nobr>([^<]*)<\/nobr><\/td>\s<td>\s<a\shref=\/roster\/([^\/]+)\/>([^<]+)<\/a><\/td>\s<td>\s<center><a\shref=\/xml\/tour\/match.php\?id=(\d+)><b>(\d+:\d+)<\/b><\/a><\/td>\s<td>\s<div\salign="right"><a\shref=\/roster\/([^\/]+)\/>([^<]+)<\/a><\/td>\s<td>\s*([^<]+)<\/td>/ig );
-
-        var a = regex.exec( text );
+        var doc = $(text);
+        var resultsTable = $(".maintable", doc).eq(2);
+        var lastMatchDetails = $("tr:eq(1) > td", resultsTable);
         
-        a.shift();
-
-        var regex2 = new RegExp( /<input\stype="hidden"\sname="ShortName"\s+value="(\w{3})\s.(\d+)."/ig );
-
-        var a2 = regex2.exec( text );
-        a.push( a2[1] );
+        var a = [];
+        a.push(lastMatchDetails.eq(0).text().trim());
         
-        var regex3 = new RegExp( /<input\stype="hidden"\sname="Money"\s+value="([^\"]+)"/ig );
+        var firstTeam = lastMatchDetails.eq(1).find("a");
+        
+        a.push(firstTeam.attr("href").substring(8)); //  /roster/
+        a.push(firstTeam.parent().text().trim());
+        
+        var match = lastMatchDetails.eq(2).find("a");
 
-        var a3 = regex3.exec( text );
-        a.push( a3[1] );
+        a.push(match.attr("href").substring(23)); //  /xml/tour/match.php?id=
+        a.push(match.text());
+
+        var secondTeam = lastMatchDetails.eq(3).find("a");
+        a.push(secondTeam.attr("href").substring(8)); //  /roster/
+        a.push(secondTeam.parent().text().trim());
+
+        a.push(lastMatchDetails.eq(4).text().trim());
+        
+        var teamLitId = beScript.Util.checkByRegExp( $( "input[name='ShortName']:eq(0)", doc ).attr("value"), /(\w{3})\s.(\d+)./ )[1];
+        a.push(teamLitId);
+        
+        var teamMoney = beScript.Util.checkByRegExp( $( "input[name='Money']:eq(0)", doc ).attr("value"), /([^\"/*"*/]+)/ )[0];
+        a.push(teamMoney);
+        
+        beScript.log(a);
         
         return a;
     },
@@ -1526,10 +1541,11 @@ beScript.organizer = {
     // 5 - second_team_id
     // 6 - second_team_name
     // 7 - tour_name
-    // 8 - my_team_num_id
+    // 8 - my_team_id
     // 9 - team_money
     _addLastMatchesResults : function( team, result ) {
-        var tablerow = document.evaluate('//td[contains(.,"' + team.name + '") and parent::tr[@bgcolor="#ffffff" or @bgcolor="#EEF4FA"]]', document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null ).singleNodeValue.parentNode;
+        var tablerow = $("td:contains('" + team.name + "')", $(".maintable")).parent();
+        
         var isHost = false;
 
         if ( result[8] == result[1] ) {
@@ -1548,7 +1564,7 @@ beScript.organizer = {
             color = "red";
         }
         
-        $(tablerow).append( "<td align=\"center\"><a href=/matches/" + result[3] + "><div style=\"color:" + color + ";\">" + result[4] + "</div></a></td>" );
+        tablerow.append( "<td align=\"center\"><a href=/matches/" + result[3] + "><div style=\"color:" + color + ";\">" + result[4] + "</div></a></td>" );
     },
     _getLastMatchResultForTeam : function( team ) {
         $.ajax({
@@ -1603,6 +1619,7 @@ beScript.organizer = {
                 if ( (isVip && (t && teamMoney == t.split("|")[9])) || (!isVip && !needUpdate) ) {
                     beScript.organizer._addLastMatchesResults( _teams[i], t.split("|") );
                 } else {
+                    beScript.log("Getting last match result for team " + _teams[i].name);
                     beScript.organizer._getLastMatchResultForTeam( _teams[i] );
                 }
             }
