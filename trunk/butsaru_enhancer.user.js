@@ -1600,7 +1600,7 @@ beScript.organizer = {
                     teamtablerow.childNodes[4].textContent.replace(/[\.\s]/g,'');
                 }
 
-                if ( (isVip && (t && teamMoney == t.split("|")[9])) || (!isVip && needUpdate) ) {
+                if ( (isVip && (t && teamMoney == t.split("|")[9])) || (!isVip && !needUpdate) ) {
                     beScript.organizer._addLastMatchesResults( _teams[i], t.split("|") );
                 } else {
                     beScript.organizer._getLastMatchResultForTeam( _teams[i] );
