@@ -140,7 +140,7 @@ var beScript = {
         text : "<span>Кратенько о том, что происходит со скриптом.<br/><br/>Как многие могли уже заметить, обновления стали происзодить намного реже - если в первую неделю существования скрипта он обновлялся ежедневно (а иногда и по несколько раз на дню), то сейчас обновления выходят раз в два-три дня. На самом деле, это хорошая новость. Это означает, что мелкие дополнения и баги исправлены и сейчас добавляется что-то более-менее существенное, что требует несколько больше времени, чем просто поправить две строчки. Это первое.<br /><br />Второе. Хотелось бы обратить внимание на то, что теперь существует <a href='http://bescript.reformal.ru/'>форма обратной связи</a>. Если Вы придумали что-то новое, что позволит улучшить скрипт - не стесняйтесь, пишите туда. Там же можно обсуждать и голосовать за чужие идеи - все это крайне приветствуется и ценится Вашим покорным слугой ;).<br /><br />Если же Вы обнаружили ошибку, большая просьба, добавить ее <a href='http://code.google.com/p/butsaenhancer/issues/list'>сюда</a>. Прошу обратить особое внимание на эти две ссылки (они, кстати, продублированы в <a href='http://forum.butsa.ru/index.php?showtopic=233323'>официальном топике скрипта</a> на форуме бутсы). Дело в том, что очень трудно на форуме отследить и запомнить все идеи/ошибки, а на этих сайтах все всегда будет на месте и ничего не потеряется. Спасибо!</span>"
     },
     
-	VERSION : "0.1.18",
+	VERSION : "0.1.19",
     NAMESPACE : "butsa_enhancer",
     UPDATES_CHECK_FREQ : 15, //minutes
     TEAM_UPDATES_CHECK_FREQ : 60 * 24, // minutes; recommended value is 60 * 24 = 1440 = 1 day.
@@ -729,8 +729,8 @@ var beScript = {
         var teamOptions = $("select", beScript.menuElem.parent().parent()).children();
         var teamOptionsA = $("a[href*='roster']", beScript.menuElem.parent().parent());
         var currentTeamIds = beScript.getCurrentTeamsIdNameMap();
-        
         var count = 0;
+
         for ( var i in _teams ) {
             count++;
         }
@@ -743,20 +743,17 @@ var beScript = {
         var needsUpdate = (count2 != count);
         var teamsArchive = null;
          
-        if (!needsUpdate) {
-            for (var teamId in _teams) {
-                if (!(teamId in currentTeamIds)) {
-                    if (teamsArchive == null) {
-                        teamsArchive = beScript.getTeamsArchive();
-                    }
-                    
-                    teamsArchive[teamId] = _teams[teamId];
-                    
-                    delete _teams[teamId];
-                    _teams[teamId] = null;
-                    
-                    needsUpdate = true;
+        for (var teamId in _teams) {
+            if (!(teamId in currentTeamIds)) {
+                if (teamsArchive == null) {
+                    teamsArchive = beScript.getTeamsArchive();
                 }
+                
+                teamsArchive[teamId] = _teams[teamId];
+                
+                delete _teams[teamId];
+                
+                needsUpdate = true;
             }
         }
         
@@ -777,7 +774,7 @@ var beScript = {
             || count == 0
             || beScript.Util.checkPeriod( "teamsUpdTime", beScript.TEAM_UPDATES_CHECK_FREQ * 1000 * 60 ) ) {
             for (var id in currentTeamIds) {
-                if ( !_teams[id] ) {
+                if ( (!_teams[id]) || (_teams[id] == null) ) {
                     _teams[id] = {};
                     _teams[id].name = currentTeamIds[id];
                     _teams[id].id = id;
@@ -799,7 +796,6 @@ var beScript = {
         }
         
         for ( var i in _teams ) {
-            beScript.log( "Updating players in " + _teams[i].name );
             beScript.loadTeamPlayers( _teams[i], force );
         }
         
@@ -1625,10 +1621,10 @@ beScript.organizer = {
         var _teams = beScript.getMyTeams();
         
         if ( _teams ) {
-            var isVip = (beScript.Util.checkByRegExp( document, /Опция\sдоступна\sтолько\sVIP-пользователям/ ) == null);
+            var rightCell = $( "td[background='/images/mainarea/right/welcome-bk2.gif']" );
+            var isVip = (beScript.Util.checkByRegExp( rightCell.text(), /Опция\sдоступна\sтолько\sVIP-пользователям/ ) == null);
 
             if (!isVip) {
-                var rightCell = $( "td[background='/images/mainarea/right/welcome-bk2.gif']" );
                 var str = '<table class="maintable" border="0" width="100%" bgcolor="#D0D0D0" cellspacing="1" cellpadding="3">'
                                 + '<thead style="font-size: 11px;"><tr bgcolor="#D3E1EC" align="center"><th><b>Команда</b></th></thead>'
                                 + '<tbody>';
@@ -1650,15 +1646,15 @@ beScript.organizer = {
             var tmp = beScript.Util.deserialize( "organizer.team." + beScript.activeTeamId );
             var activeTeamMoney = parseInt($( "a[href='/finances/report.php']", $( "#beScript_td" ).next()).text().replace(/\./g, ''));
             var needUpdate = tmp && (activeTeamMoney != tmp.split("|")[9]);
+            var mainTable = $(".maintable");
             
             for ( var i in _teams ) {
                 var t = beScript.Util.deserialize( "organizer.team." + _teams[i].id );
-                var teamtablerow = $("tr[bgcolor='#ffffff'],tr[bgcolor='#EEF4FA'] > td:contains('" + _teams[i].name + "')");
-                beScript.log(teamtablerow);
+                var teamtablerow = $("td:contains('" + _teams[i].name + "')", mainTable).parent();//$("tr[bgcolor='#ffffff'],tr[bgcolor='#EEF4FA'] > td:contains('" + _teams[i].name + "')").eq(0);
                 var teamMoney = -1;
                 
                 if (isVip) {
-                    teamMoney = teamtablerow.children().eq(4).text().replace(/[\.\s]/g,'');
+                    teamMoney = teamtablerow.children().eq(2).text().replace(/[\.\s]/g,'');
                 }
 
                 if ( (isVip && (t && teamMoney == t.split("|")[9])) || (!isVip && !needUpdate) ) {
@@ -3307,7 +3303,7 @@ function runBEScript() {
     try {
         beScript.init();
     } catch (e) {
-        beScript.log( "+" + e );
+        beScript.log( "beScript Error! " + e );
         beScript.log( e.stack );
     }
 }
