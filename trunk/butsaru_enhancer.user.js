@@ -785,8 +785,9 @@ var beScript = {
     addBeScriptMenu : function() {
         if ( $("#beScript_menu").length == 0 ) {
             var greetingTd = $(".autoten");
+            var browserName = $.browser.name;
 
-            if ( window.navigator.vendor && window.navigator.vendor.match(/Google/) ) {
+            if ( browserName == "chrome" || browserName == "safari" ) {
                 greetingTd.attr( "valign", "center" );
             }
             
@@ -2870,10 +2871,11 @@ beScript.train = {
         players.each(function(i) {
             var self = $(this);
             var tds = $( "td", self );
-            
+
             if ( $("select", tds.eq(8)).size() == 0 ) return; // goalkeeper
             
             var playerId = parseInt(beScript.Util.checkByRegExp( tds.eq(1).find("a").attr( "href" ), /(\d+)/ )[1]);
+            beScript.log(playerId);
             var player = beScript.getMyTeams()[beScript.activeTeamId].players[playerId];
             if (!player) {
                 beScript.log( "Error! Cannot find player " + playerId + " in team " + beScript.getMyTeams()[beScript.activeTeamId].name );
@@ -3098,7 +3100,7 @@ beScript.train = {
                 beScript.train.processIndividualPlan( trainTable.eq(0) );
             }
             
-            GM_wait( 'beScript.__teams[beScript.activeTeamId].players.status == 15', tmp, beScript );
+            GM_wait( 'beScript.__teams[beScript.activeTeamId].players.status == 100', tmp, beScript );
         }
     },
     
