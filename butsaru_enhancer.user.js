@@ -2633,7 +2633,7 @@ beScript.playerProfile = {
         player.expPoints = parseInt( playerLearningTable.eq(1).children().eq(1).text().replace( /\d+\(/, "" ).replace( ")", "" ) );
         player.expLevel = parseInt( playerLearningTable.eq(2).children().eq(1).text() );
         
-        var result = beScript.trainWithConditions(player);
+        var result = beScript.trainPlayerWithConditions(player);
         var numberOfTrains = result.numberOfTrains;
         player = result.player;
 
@@ -2709,9 +2709,9 @@ beScript.playerProfile = {
         beScript.log(player);
         beScript.log("!!!!");
 
-/*        if ( beScript.settings.player_profile_extender !== false ) {
+        if ( beScript.settings.player_profile_extender !== false ) {
             GM_wait( 'beScript.trainNumber != -1', beScript.playerProfile.addMenuAndUpdatePlayerProgress, beScript );
-        } */
+        }
     }
 };
 
