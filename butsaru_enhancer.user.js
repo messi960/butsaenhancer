@@ -47,7 +47,7 @@ var beScript = {
         text : "<span>Кратенько о том, что происходит со скриптом.<br/><br/>Как многие могли уже заметить, обновления стали происзодить намного реже - если в первую неделю существования скрипта он обновлялся ежедневно (а иногда и по несколько раз на дню), то сейчас обновления выходят раз в два-три дня. На самом деле, это хорошая новость. Это означает, что мелкие дополнения и баги исправлены и сейчас добавляется что-то более-менее существенное, что требует несколько больше времени, чем просто поправить две строчки. Это первое.<br /><br />Второе. Хотелось бы обратить внимание на то, что теперь существует <a href='http://bescript.reformal.ru/'>форма обратной связи</a>. Если Вы придумали что-то новое, что позволит улучшить скрипт - не стесняйтесь, пишите туда. Там же можно обсуждать и голосовать за чужие идеи - все это крайне приветствуется и ценится Вашим покорным слугой ;).<br /><br />Если же Вы обнаружили ошибку, большая просьба, добавить ее <a href='http://code.google.com/p/butsaenhancer/issues/list'>сюда</a>. Прошу обратить особое внимание на эти две ссылки (они, кстати, продублированы в <a href='http://forum.butsa.ru/index.php?showtopic=233323'>официальном топике скрипта</a> на форуме бутсы). Дело в том, что очень трудно на форуме отследить и запомнить все идеи/ошибки, а на этих сайтах все всегда будет на месте и ничего не потеряется. Спасибо!</span>"
     },
     
-	VERSION : "0.2.0",
+	VERSION : "0.2.1",
     NAMESPACE : "butsa_enhancer",
     UPDATES_CHECK_FREQ : 15, //minutes
     TEAM_UPDATES_CHECK_FREQ : 60 * 24, // minutes; recommended value is 60 * 24 = 1440 = 1 day.
@@ -235,9 +235,9 @@ var beScript = {
         oldSkl,
         ExpLim;
         
-        var maxAge = parseInt(beScript.settings.playerProfile.number_of_trains_max_age);
-        var maxSeasonNumber = parseInt(beScript.settings.playerProfile.number_of_trains_max_season);
-        var maxNumberOfTrains = parseInt(beScript.settings.playerProfile.number_of_trains_train_num);
+        var maxAge = parseInt(beScript.settings.playerProfile.number_of_trains_max_age, 10);
+        var maxSeasonNumber = parseInt(beScript.settings.playerProfile.number_of_trains_max_season, 10);
+        var maxNumberOfTrains = parseInt(beScript.settings.playerProfile.number_of_trains_train_num, 10);
         var sklls = beScript.playerTrainOrder || beScript.skillsArr;
         beScript.log( sklls );
 
@@ -357,17 +357,17 @@ var beScript = {
         player.secondaryPosition = pos[2];
 
         var expPoints = beScript.Util.checkByRegExp( playerLearningTable.eq(1).children().eq(1).text(), /(\d+)\s\((\d+)\)?/ );
-        player.expPoints = parseInt(expPoints[1]);
-        player.nextLevelExpPoints = parseInt(expPoints[2]);
-        player.expLevel = parseInt( playerLearningTable.eq(2).children().eq(1).text() );
-        player.talent = parseInt( playerLearningTable.eq(0).children().eq(1).text() );
-        player.morale = parseInt(beScript.Util.checkByRegExp(playerConditionTable.eq(1).children().eq(1).text(), /\d+/)[0]);
+        player.expPoints = parseInt(expPoints[1], 10);
+        player.nextLevelExpPoints = parseInt(expPoints[2], 10);
+        player.expLevel = parseInt( playerLearningTable.eq(2).children().eq(1).text(), 10 );
+        player.talent = parseInt( playerLearningTable.eq(0).children().eq(1).text(), 10 );
+        player.morale = parseInt(beScript.Util.checkByRegExp(playerConditionTable.eq(1).children().eq(1).text(), /\d+/)[0], 10);
 
-        player.number = parseInt( beScript.Util.checkByRegExp(playerInfo.text().trim(), /^\((\d+)\)/ )[1] );
+        player.number = parseInt( beScript.Util.checkByRegExp(playerInfo.text().trim(), /^\((\d+)\)/ )[1], 10 );
         player.name = $( "a[href*='xml/players']", playerInfo ).text().trim();
         player.country = {};
         player.country.name = $( "img[src*='flag']", playerInfo ).attr( "title" ).trim();
-        player.country.id = parseInt(beScript.Util.checkByRegExp( $( "img[src*='flag']", playerInfo ).attr( "src" ), /(\d+)\.gif/ )[1]);
+        player.country.id = parseInt(beScript.Util.checkByRegExp( $( "img[src*='flag']", playerInfo ).attr( "src" ), /(\d+)\.gif/ )[1], 10);
 
         var bonusesStr = playerBehaviourTable.eq(7).children().eq(1).text().trim().replace(/-/g,"");
         player.bonuses = {str:bonusesStr};
@@ -380,13 +380,13 @@ var beScript = {
                 var bonus = beScript.bonusesByAbbr[bonusArr[1]];
                 var level = bonusArr[2] || 1;
                 
-                player.bonuses[bonus.abbr] = parseInt(level);
+                player.bonuses[bonus.abbr] = parseInt(level, 10);
             }
         }
         
         var bonusPoints = beScript.Util.checkByRegExp( playerBehaviourTable.eq(3).text().trim(), /(\d+)\((\d+)\)?/ );
-        player.bonusPoints = parseInt(bonusPoints[1]);
-        player.nextBonusPoints = parseInt(bonusPoints[2]);
+        player.bonusPoints = parseInt(bonusPoints[1], 10);
+        player.nextBonusPoints = parseInt(bonusPoints[2], 10);
 
         if ($.isFunction(player['trainWithConditions'])) {
             beScript.log("!!");
@@ -491,9 +491,9 @@ var beScript = {
             var id = -1;
             
             if ( i % 3 == 0 ) {
-                id = parseInt( beScript.Util.checkByRegExp( $("a", this).attr( "href" ), /\?id=(\d+)/ )[1] );
+                id = parseInt( beScript.Util.checkByRegExp( $("a", this).attr( "href" ), /\?id=(\d+)/ )[1], 10 );
             } else {
-                id = parseInt( $( "input[name^=building]", this ).attr( "value" ) );
+                id = parseInt( $( "input[name^=building]", this ).attr( "value" ), 10 );
             }
             
             if ( id > 0 ) {
@@ -516,7 +516,7 @@ var beScript = {
                         building.condition = parseInt( info[3] );
                         var dateComps = info[1].split( "." );
                         var timeComps = info[2].split( ":" );
-                        building.repairDate = Date.UTC( dateComps[2], parseInt(dateComps[1]) - 1, dateComps[0], timeComps[0], timeComps[1], timeComps[2] );
+                        building.repairDate = Date.UTC( dateComps[2], parseInt(dateComps[1], 10) - 1, dateComps[0], timeComps[0], timeComps[1], timeComps[2] );
                         break;
                     case 2: break;
                     default : break;
@@ -542,9 +542,9 @@ var beScript = {
             var id = -1;
             
             if ( i % 3 == 0 ) {
-                id = parseInt( beScript.Util.checkByRegExp( $("a", this).attr( "href" ), /\?id=(\d+)/ )[1] );
+                id = parseInt( beScript.Util.checkByRegExp( $("a", this).attr( "href" ), /\?id=(\d+)/ )[1], 10 );
             } else {
-                id = parseInt( $( "input[name^=building]", this ).attr( "value" ) );
+                id = parseInt( $( "input[name^=building]", this ).attr( "value" ), 10 );
             }
             
             if ( id > 0 ) {
@@ -566,7 +566,7 @@ var beScript = {
                         building.condition = parseInt( info[3] );
                         var dateComps = info[1].split( "." );
                         var timeComps = info[2].split( ":" );
-                        building.repairDate = Date.UTC( dateComps[2], parseInt(dateComps[1]) - 1, dateComps[0], timeComps[0], timeComps[1], timeComps[2] );
+                        building.repairDate = Date.UTC( dateComps[2], parseInt(dateComps[1], 10) - 1, dateComps[0], timeComps[0], timeComps[1], timeComps[2] );
                         break;
                     case 2: break;
                     default : break;
@@ -939,9 +939,9 @@ var beScript = {
     
         var parseFunction = function(data) {
             var trainNumberArr = beScript.Util.checkByRegExp( data, /Последняя\sтренировка:\s([^;]+);\sЭто\s(\d+)\sтренировка\sиз\s(\d+)\sсезона\s(\d+)\.\sОсталось\sтренировок:\s(\d+)/ );
-            beScript.trainNumber = parseInt(trainNumberArr[5]);
-            beScript.season = parseInt(trainNumberArr[4]);
-            beScript.playingDay = Math.round((parseInt(trainNumberArr[2]) / parseInt(trainNumberArr[3])) * 84);
+            beScript.trainNumber = parseInt(trainNumberArr[5], 10);
+            beScript.season = parseInt(trainNumberArr[4], 10);
+            beScript.playingDay = Math.round((parseInt(trainNumberArr[2], 10) / parseInt(trainNumberArr[3], 10)) * 84);
             
             beScript.Util.serialize( "trainNumber", beScript.trainNumber );
             beScript.Util.serialize( "playingDay", beScript.playingDay );
@@ -1421,12 +1421,12 @@ beScript.Util = {
                 if ( text != "" ) {
                     var expMatch = beScript.Util.checkByRegExp( text, /(\d+)\((\d+)\)/ );
                     if ( expMatch ) {
-                        return parseInt(expMatch[1]) / parseInt(expMatch[2]);
+                        return parseInt(expMatch[1]) / parseInt(expMatch[2], 10);
                     }
 
                     expMatch = beScript.Util.checkByRegExp( text, /(\d+):(\d+)/ );
                     if ( expMatch ) {
-                        return parseInt(expMatch[1]) - parseInt(expMatch[2]) / 1000;
+                        return parseInt(expMatch[1], 10) - parseInt(expMatch[2], 10) / 1000;
                     }
 
                     return text.replace( /\./g, "" ); 
@@ -1685,7 +1685,7 @@ beScript.roster = {
                         
                         for ( var i in player.bonuses ) {
                             if ( i == 'str' ) continue;
-                            overallBonusLevel += parseInt(player.bonuses[i]);
+                            overallBonusLevel += parseInt(player.bonuses[i], 10);
                         }
                         
                         beScript.log(overallBonusLevel);
@@ -1865,7 +1865,7 @@ beScript.roster = {
                 if ( building.condition < 100 ) {
                     toFix = true;
                     $this.css( 'color', 'A70000' );
-
+beScript.log( "!!!!" + utcDate + "  " + building.repairDate );
                     var diff = ((utcDate - building.repairDate) / 1000 / 60 / 60 / 24);
                     var daysLN = Math.floor((utcDate - building.lastNotification) / 1000 / 60 / 60 / 24);
                     var days = Math.floor(diff);
@@ -1928,7 +1928,7 @@ beScript.roster = {
                 });
                 
             repairImages.click( function() {
-                var id = parseInt( (beScript.Util.checkByRegExp( $(this).attr( "name" ), /\d+/ )||["-1"])[0] );
+                var id = parseInt( (beScript.Util.checkByRegExp( $(this).attr( "name" ), /\d+/ )||["-1"])[0], 10 );
                 var addAct = "";
                 var textId = "&BuildingID=" + id + "&id=" + id;
                 
@@ -2515,7 +2515,7 @@ beScript.playerProfile = {
                             if (matchDetails.eq(1).text().match(/\d+'/g/*'*/)) {
                                 var match = {};
                                 match.date = matchDetails.eq(0).text();
-                                match.minutes = parseInt(matchDetails.eq(1).text().replace( "'", "" ));
+                                match.minutes = parseInt(matchDetails.eq(1).text().replace( "'", "" ), 10);
                                 match.mark = parseFloat(matchDetails.eq(2).text());
                                 match.type = matchDetails.eq(4).text().split( "," )[0];
                                 match.expPoints = beScript.expPointsPerMinute[match.type] * match.minutes;
@@ -2629,9 +2629,9 @@ beScript.playerProfile = {
         player.age = parseInt( playerBehaviourTable.eq(1).children().eq(1).text() );
         player.primaryPosition = playerBehaviourTable.eq(2).children().eq(1).text();
         
-        player.talent = parseInt( playerLearningTable.eq(0).children().eq(1).text() );
-        player.expPoints = parseInt( playerLearningTable.eq(1).children().eq(1).text().replace( /\d+\(/, "" ).replace( ")", "" ) );
-        player.expLevel = parseInt( playerLearningTable.eq(2).children().eq(1).text() );
+        player.talent = parseInt( playerLearningTable.eq(0).children().eq(1).text(), 10 );
+        player.expPoints = parseInt( playerLearningTable.eq(1).children().eq(1).text().replace( /\d+\(/, "" ).replace( ")", "" ), 10 );
+        player.expLevel = parseInt( playerLearningTable.eq(2).children().eq(1).text(), 10 );
         
         var result = beScript.trainPlayerWithConditions(player);
         var numberOfTrains = result.numberOfTrains;
@@ -2705,10 +2705,6 @@ beScript.playerProfile = {
         
         player = beScript.parsePlayerInfo(player, $("body"));
         
-        beScript.log("!!!!");
-        beScript.log(player);
-        beScript.log("!!!!");
-
         if ( beScript.settings.player_profile_extender !== false ) {
             GM_wait( 'beScript.trainNumber != -1', beScript.playerProfile.addMenuAndUpdatePlayerProgress, beScript );
         }
@@ -2770,7 +2766,7 @@ beScript.finances = {
         financeOperations.each(function(i) {
             var tds = $( "td", $(this) );
             var date = tds.eq(0).text().trim().split( " " )[0];
-            var value = parseInt(tds.eq(2).text().trim().replace( /\./g, "" ));
+            var value = parseInt(tds.eq(2).text().trim().replace( /\./g, "" ), 10);
             var operation = operationsSumByDate[date];
             var operationName = tds.eq(1).text().trim();
             
