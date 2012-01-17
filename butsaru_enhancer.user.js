@@ -1211,7 +1211,7 @@ beScript.Util = {
                 return false; 
             }, 
             format: function(s) { 
-                var posMatch = beScript.Util.checkByRegExp( s, "(Gk|[LCRADS][wdmf])/?(.*)" );
+                var posMatch = beScript.Util.checkByRegExp( s, "(Gk|[LCRADS][wdmf][d]?)/?(.*)" );
                 var result = beScript.positions[posMatch[1]];
                 if ( posMatch[2] != "" ) {
                     result += beScript.positions[posMatch[2]] / 100;
