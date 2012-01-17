@@ -1459,7 +1459,9 @@ beScript.forecasts = {
         var originalColumnArray = new Array();
         
         tableRows.each( function(i) {
-            if ( i == 0 ) {
+            if ( i == 0 ) 
+            {
+                $("td:nth-child(3)", $(this)).after("<td></td>");
                 return;
             }
             
@@ -1467,7 +1469,7 @@ beScript.forecasts = {
             originalColumnArray[i - 1].oldIndex = i;
 
             var home_c11 = $("td:nth-child(3)", $(this)).text();
-            var away_c11 = $("td:nth-child(5)", $(this)).text();
+            var away_c11 = $("td:nth-child(4)", $(this)).text();
 
             originalColumnArray[i - 1].value = home_c11 - away_c11;
         });
@@ -1485,6 +1487,7 @@ beScript.forecasts = {
         for (var i = 0; i < originalColumnArray.length; i++) {
             var newNode = $(tableRows[originalColumnArray[i].oldIndex]).clone();
             newNode.attr("bgColor", (i % 2 == 0)?"#EEF4FA":"#FFFFFF");
+            $( "td:nth-child(3)", newNode ).after("<td></td>");
             var midNode = $( "td:nth-child(4)", newNode );
             midNode.attr( "align", "center" );
             
