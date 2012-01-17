@@ -47,7 +47,7 @@ var beScript = {
         text : "<span>Кратенько о том, что происходит со скриптом.<br/><br/>Как многие могли уже заметить, обновления стали происзодить намного реже - если в первую неделю существования скрипта он обновлялся ежедневно (а иногда и по несколько раз на дню), то сейчас обновления выходят раз в два-три дня. На самом деле, это хорошая новость. Это означает, что мелкие дополнения и баги исправлены и сейчас добавляется что-то более-менее существенное, что требует несколько больше времени, чем просто поправить две строчки. Это первое.<br /><br />Второе. Хотелось бы обратить внимание на то, что теперь существует <a href='http://bescript.reformal.ru/'>форма обратной связи</a>. Если Вы придумали что-то новое, что позволит улучшить скрипт - не стесняйтесь, пишите туда. Там же можно обсуждать и голосовать за чужие идеи - все это крайне приветствуется и ценится Вашим покорным слугой ;).<br /><br />Если же Вы обнаружили ошибку, большая просьба, добавить ее <a href='http://code.google.com/p/butsaenhancer/issues/list'>сюда</a>. Прошу обратить особое внимание на эти две ссылки (они, кстати, продублированы в <a href='http://forum.butsa.ru/index.php?showtopic=233323'>официальном топике скрипта</a> на форуме бутсы). Дело в том, что очень трудно на форуме отследить и запомнить все идеи/ошибки, а на этих сайтах все всегда будет на месте и ничего не потеряется. Спасибо!</span>"
     },
     
-	VERSION : "0.2.1",
+	VERSION : "0.2.2",
     NAMESPACE : "butsa_enhancer",
     UPDATES_CHECK_FREQ : 15, //minutes
     TEAM_UPDATES_CHECK_FREQ : 60 * 24, // minutes; recommended value is 60 * 24 = 1440 = 1 day.
@@ -78,6 +78,8 @@ var beScript = {
         last_matches_in_organizer : true,
         finance_report_sum_column : true,
         update_teams_menu : true,
+
+        stayWithin1stVersion : false,
         
         playerProfile : {
             train_regime_radio : 1,
@@ -863,6 +865,7 @@ var beScript = {
             otherDiv.append( this.createCheckboxWithIdAndText( "last_matches_in_organizer", "Результаты матчей в органайзере", null, "", beScript.settings["last_matches_in_organizer"] ) );
             otherDiv.append( this.createCheckboxWithIdAndText( "finance_report_sum_column", "Финансы - сумма за день", null, "", beScript.settings["finance_report_sum_column"] ) );
             otherDiv.append( this.createCheckboxWithIdAndText( "individual_plan", "Помощник тренера - индивидуальный план тренировок", null, "", beScript.settings["individual_plan"] ) );
+            otherDiv.append( this.createCheckboxWithIdAndText( "stayWithin1stVersion", "Не оповещать об изменениях версии 0.2.*", null, "", beScript.settings["stayWithin1stVersion"] ) );
             
             if ( $( "select", $("#beScript_td").next()).size() > 0 ) {
                 otherDiv.append( this.createCheckboxWithIdAndText( "update_teams_menu", "Улучшить меню выбора команд", null, "", beScript.settings["update_teams_menu"] ) );
@@ -1208,10 +1211,10 @@ beScript.Util = {
                 return false; 
             }, 
             format: function(s) { 
-                var posMatch = beScript.Util.checkByRegExp( s, "(Gk|[LCR][dmf])/?(.*)" );
+                var posMatch = beScript.Util.checkByRegExp( s, "(Gk|[LCRADS][wdmf])/?(.*)" );
                 var result = beScript.positions[posMatch[1]];
                 if ( posMatch[2] != "" ) {
-                    result += beScript.positions[posMatch[2]] / 10;
+                    result += beScript.positions[posMatch[2]] / 100;
                 }
 
                 return result;
@@ -3116,7 +3119,9 @@ beScript.train = {
 beScript.Update = {
 	UpdaterClass : function(updTime) {
 		var _t = this;
-		var url = 'http://butsaenhancer.googlecode.com/svn/trunk/version.txt';
+		var urlNew = 'http://butsaenhancer.googlecode.com/svn/trunk/version.txt';
+		var urlOld = 'http://butsaenhancer.googlecode.com/svn/trunk/versionOld.txt';
+		var url = beScript.settings.stayWithin1stVersion?urlOld:urlNew;
 		var randSeed = 0;
         var latestVersion = beScript.Util.deserialize( "latestVersion" );
         
