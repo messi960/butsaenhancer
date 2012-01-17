@@ -1172,7 +1172,7 @@ var beScript = {
         
         beScript.Util.init();
         
-        if (beScript.Util.checkLocation( "kp.php" ) || beScript.Util.checkLocation( /kp\/\?act=next$/ )) {
+        if ((beScript.Util.checkLocation( "kp.php" ) || beScript.Util.checkLocation( /kp\/\?act=next$/ )) && (beScript.hrefAction != "mnext")) {
             beScript.forecasts.process();
         }
         if (beScript.Util.checkLocation( "school" )) {
